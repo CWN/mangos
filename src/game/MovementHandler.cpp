@@ -506,13 +506,15 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
        // static char const* move_type_name[MAX_MOVE_TYPE] = {  "Walk", "Run", "Walkback", "Swim", "Swimback", "Turn", "Fly", "Flyback" };
        // sLog.outBasic("%s newcoord: tm:%d ftm:%d | %f,%f,%fo(%f) [%X][%s]$%s",GetPlayer()->GetName(),movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,MovementFlags, LookupOpcodeName(opcode),move_type_name[move_type]);
        // sLog.outBasic("%f",tg_z);
-        if (opcode == MSG_MOVE_JUMP){
-            if (GetPlayer()->m_anti_justjumped == 1){
+        if (opcode == MSG_MOVE_JUMP && !GetPlayer()->IsInWater()){
+            if (GetPlayer()->m_anti_justjumped >= 1){
                 ///GetPlayer()->m_anti_justjumped = 0;
                 check_passed = false; //don't process new jump packet
             } else {
-                GetPlayer()->m_anti_justjumped = 1;
+                GetPlayer()->m_anti_justjumped += 1;
             }
+        } else if (GetPlayer()->IsInWater()) {
+             GetPlayer()->m_anti_justjumped = 0;
         }
         if ((real_delta > allowed_delta)) //&& (delta_z < 1)
         {
