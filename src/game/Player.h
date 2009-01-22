@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1329,7 +1329,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SetSelection(const uint64 &guid) { m_curSelection = guid; SetUInt64Value(UNIT_FIELD_TARGET, guid); }
 
         uint8 GetComboPoints() { return m_comboPoints; }
-        uint64 GetComboTarget() { return m_comboTarget; }
+        const uint64& GetComboTarget() const { return m_comboTarget; }
 
         void AddComboPoints(Unit* target, int8 count);
         void ClearComboPoints();
@@ -1365,10 +1365,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         Item* GetMItem(uint32 id)
         {
             ItemMap::const_iterator itr = mMitems.find(id);
-            if (itr != mMitems.end())
-                return itr->second;
-
-            return NULL;
+            return itr != mMitems.end() ? itr->second : NULL;
         }
 
         void AddMItem(Item* it)
@@ -1380,12 +1377,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         bool RemoveMItem(uint32 id)
         {
-            ItemMap::iterator i = mMitems.find(id);
-            if (i == mMitems.end())
-                return false;
-
-            mMitems.erase(i);
-            return true;
+            return mMitems.erase(id) ? true : false;
         }
 
         void PetSpellInitialize();
@@ -1661,11 +1653,12 @@ class MANGOS_DLL_SPEC Player : public Unit
         void UpdateCombatSkills(Unit *pVictim, WeaponAttackType attType, MeleeHitOutcome outcome, bool defence);
 
         void SetSkill(uint32 id, uint16 currVal, uint16 maxVal);
-        uint16 GetMaxSkillValue(uint32 skill) const;        // max + perm. bonus
+        uint16 GetMaxSkillValue(uint32 skill) const;        // max + perm. bonus + temp bonus
         uint16 GetPureMaxSkillValue(uint32 skill) const;    // max
         uint16 GetSkillValue(uint32 skill) const;           // skill value + perm. bonus + temp bonus
         uint16 GetBaseSkillValue(uint32 skill) const;       // skill value + perm. bonus
         uint16 GetPureSkillValue(uint32 skill) const;       // skill value
+        int16 GetSkillPermBonusValue(uint32 skill) const;
         int16 GetSkillTempBonusValue(uint32 skill) const;
         bool HasSkill(uint32 skill) const;
         void learnSkillRewardedSpells( uint32 id );
@@ -2045,9 +2038,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         GroupReference& GetGroupRef() { return m_group; }
         void SetGroup(Group *group, int8 subgroup = -1);
         uint8 GetSubGroup() const { return m_group.getSubGroup(); }
-        uint32 GetGroupUpdateFlag() { return m_groupUpdateMask; }
+        uint32 GetGroupUpdateFlag() const { return m_groupUpdateMask; }
         void SetGroupUpdateFlag(uint32 flag) { m_groupUpdateMask |= flag; }
-        uint64 GetAuraUpdateMask() { return m_auraUpdateMask; }
+        const uint64& GetAuraUpdateMask() const { return m_auraUpdateMask; }
         void SetAuraUpdateMask(uint8 slot) { m_auraUpdateMask |= (uint64(1) << slot); }
         Player* GetNextRandomRaidMember(float radius);
         PartyResult CanUninviteFromGroup() const;

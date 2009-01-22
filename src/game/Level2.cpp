@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -854,8 +854,8 @@ bool ChatHandler::HandleNpcAddCommand(const char* args)
 {
     if(!*args)
         return false;
-    char* charID = strtok((char*)args, " ");
-    if (!charID)
+    char* charID = extractKeyFromLink((char*)args,"Hcreature_entry");
+    if(!charID)
         return false;
 
     char* team = strtok(NULL, " ");

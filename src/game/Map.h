@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -131,7 +131,13 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         virtual ~Map();
 
         // currently unused for normal maps
-        virtual bool CanUnload(const uint32& diff);
+        bool CanUnload(uint32 diff)
+        {
+            if(!m_unloadTimer) return false;
+            if(m_unloadTimer <= diff) return true;
+            m_unloadTimer -= diff;
+            return false;
+        }
 
         virtual bool Add(Player *);
         virtual void Remove(Player *, bool);

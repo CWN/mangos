@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -719,7 +719,8 @@ enum MangosStrings
     LANG_MUST_MALE_OR_FEMALE            = 1119,
     LANG_YOU_CHANGE_GENDER              = 1120,
     LANG_YOUR_GENDER_CHANGED            = 1121,
-    // Room for more level 3              1122-1199 not used
+    LANG_SKILL_VALUES                   = 1122,
+    // Room for more level 3              1123-1199 not used
 
     // FREE IDS                           1200-9999
 

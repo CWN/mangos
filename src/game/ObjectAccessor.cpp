@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,22 +269,6 @@ ObjectAccessor::UpdateObject(Object* obj, Player* exceptPlayer)
         iter->first->GetSession()->SendPacket(&packet);
         packet.clear();
     }
-}
-
-void
-ObjectAccessor::AddUpdateObject(Object *obj)
-{
-    Guard guard(i_updateGuard);
-    i_objects.insert(obj);
-}
-
-void
-ObjectAccessor::RemoveUpdateObject(Object *obj)
-{
-    Guard guard(i_updateGuard);
-    std::set<Object *>::iterator iter = i_objects.find(obj);
-    if( iter != i_objects.end() )
-        i_objects.erase( iter );
 }
 
 void

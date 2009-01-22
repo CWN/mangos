@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,9 +56,7 @@ class HashMapHolder
         static void Remove(T* o)
         {
             Guard guard(i_lock);
-            typename MapType::iterator itr = m_objectMap.find(o->GetGUID());
-            if (itr != m_objectMap.end())
-                m_objectMap.erase(itr);
+            m_objectMap.erase(o->GetGUID());
         }
 
         static T* Find(uint64 guid)
@@ -172,16 +170,22 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
             HashMapHolder<Player>::Remove(pl);
 
             Guard guard(i_updateGuard);
-
-            std::set<Object *>::iterator iter2 = std::find(i_objects.begin(), i_objects.end(), (Object *)pl);
-            if( iter2 != i_objects.end() )
-                i_objects.erase(iter2);
+            i_objects.erase((Object *)pl);
         }
 
         void SaveAllPlayers();
 
-        void AddUpdateObject(Object *obj);
-        void RemoveUpdateObject(Object *obj);
+        void AddUpdateObject(Object *obj)
+        {
+            Guard guard(i_updateGuard);
+            i_objects.insert(obj);
+        }
+
+        void RemoveUpdateObject(Object *obj)
+        {
+            Guard guard(i_updateGuard);
+            i_objects.erase( obj );
+        }
 
         void Update(uint32 diff);
         void UpdatePlayers(uint32 diff);

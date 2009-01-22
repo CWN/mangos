@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9164,19 +9164,45 @@ bool Unit::SelectHostilTarget()
     //threat list sorting etc.
 
     assert(GetTypeId()== TYPEID_UNIT);
-    Unit* target = NULL;
 
     //This function only useful once AI has been initialized
     if (!((Creature*)this)->AI())
         return false;
 
-    if(!m_ThreatManager.isThreatListEmpty())
+    Unit* target = NULL;
+
+    // First checking if we have some taunt on us
+    const AuraList& tauntAuras = GetAurasByType(SPELL_AURA_MOD_TAUNT);
+    if ( !tauntAuras.empty() )
     {
-        if(!HasAuraType(SPELL_AURA_MOD_TAUNT))
+        Unit* caster;
+
+        // The last taunt aura caster is alive an we are happy to attack him
+        if ( (caster = tauntAuras.back()->GetCaster()) && caster->isAlive() )
+            return true;
+        else if (tauntAuras.size() > 1)
         {
-            target = m_ThreatManager.getHostilTarget();
+            // We do not have last taunt aura caster but we have more taunt auras,
+            // so find first available target
+
+            // Auras are pushed_back, last caster will be on the end
+            AuraList::const_iterator aura = --tauntAuras.end();
+            do
+            {
+                --aura;
+                if ( (caster = (*aura)->GetCaster()) &&
+                     caster->IsInMap(this) && caster->isTargetableForAttack() && caster->isInAccessablePlaceFor((Creature*)this) )
+                {
+                    target = caster;
+                    break;
+                }
+            }while (aura != tauntAuras.begin());
         }
     }
+
+    if ( !target && !m_ThreatManager.isThreatListEmpty() )
+        // No taunt aura or taunt aura caster is dead standart target selection
+        target = m_ThreatManager.getHostilTarget();
 
     if(target)
     {

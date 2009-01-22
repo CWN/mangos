@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -727,9 +727,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         void _removeAttacker(Unit *pAttacker)               // must be called only from Unit::AttackStop()
         {
-            AttackerSet::iterator itr = m_attackers.find(pAttacker);
-            if(itr != m_attackers.end())
-                m_attackers.erase(itr);
+            m_attackers.erase(pAttacker);
         }
         Unit * getAttackerForHelper()                       // If someone wants to help, who to give them
         {

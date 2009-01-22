@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1427,14 +1427,6 @@ void Map::RemoveAllObjectsInRemoveList()
         }
     }
     //sLog.outDebug("Object remover 2 check.");
-}
-
-bool Map::CanUnload(const uint32 &diff)
-{
-    if(!m_unloadTimer) return false;
-    if(m_unloadTimer < diff) return true;
-    m_unloadTimer -= diff;
-    return false;
 }
 
 uint32 Map::GetPlayersCountExceptGMs() const
