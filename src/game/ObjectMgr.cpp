@@ -43,6 +43,7 @@
 #include "SpellAuras.h"
 #include "Util.h"
 #include "WaypointManager.h"
+#include "BattleGround.h"
 
 INSTANTIATE_SINGLETON_1(ObjectMgr);
 
@@ -1407,18 +1408,36 @@ void ObjectMgr::LoadAuctions()
 {
     QueryResult *result = CharacterDatabase.Query("SELECT COUNT(*) FROM auctionhouse");
     if( !result )
+    {
+        barGoLink bar(1);
+        bar.step();
+        sLog.outString("");
+        sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
+    }
 
     Field *fields = result->Fetch();
     uint32 AuctionCount=fields[0].GetUInt32();
     delete result;
 
     if(!AuctionCount)
+    {
+        barGoLink bar(1);
+        bar.step();
+        sLog.outString("");
+        sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
+    }
 
     result = CharacterDatabase.Query( "SELECT id,auctioneerguid,itemguid,item_template,itemowner,buyoutprice,time,buyguid,lastbid,startbid,deposit,location FROM auctionhouse" );
     if( !result )
+    {
+        barGoLink bar(1);
+        bar.step();
+        sLog.outString("");
+        sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
+    }
 
     barGoLink bar( AuctionCount );
 
@@ -1459,7 +1478,6 @@ void ObjectMgr::LoadAuctions()
 
     sLog.outString();
     sLog.outString( ">> Loaded %u auctions", AuctionCount );
-    sLog.outString();
 }
 
 void ObjectMgr::LoadItemLocales()
@@ -1616,14 +1634,30 @@ void ObjectMgr::LoadItemPrototypes()
             const_cast<ItemPrototype*>(proto)->RequiredSkill = 0;
         }
 
-        if(!(proto->AllowableClass & CLASSMASK_ALL_PLAYABLE))
         {
-            sLog.outErrorDb("Item (Entry: %u) not have in `AllowableClass` any playable classes (%u) and can't be equipped.",i,proto->AllowableClass);
-        }
 
-        if(!(proto->AllowableRace & RACEMASK_ALL_PLAYABLE))
-        {
-            sLog.outErrorDb("Item (Entry: %u) not have in `AllowableRace` any playable races (%u) and can't be equipped.",i,proto->AllowableRace);
+            // can be used in equip slot, as page read use in inventory, or spell casting at use
+            bool req = proto->InventoryType!=INVTYPE_NON_EQUIP || proto->PageText;
+            if(!req)
+            {
+                for (int j = 0; j < 5; ++j)
+                {
+                    if(proto->Spells[j].SpellId)
+                    {
+                        req = true;
+                        break;
+                    }
+                }
+            }
+
+            if(req)
+            {
+                if(!(proto->AllowableClass & CLASSMASK_ALL_PLAYABLE))
+                    sLog.outErrorDb("Item (Entry: %u) not have in `AllowableClass` any playable classes (%u) and can't be equipped or use.",i,proto->AllowableClass);
+
+                if(!(proto->AllowableRace & RACEMASK_ALL_PLAYABLE))
+                    sLog.outErrorDb("Item (Entry: %u) not have in `AllowableRace` any playable races (%u) and can't be equipped or use.",i,proto->AllowableRace);
+            }
         }
 
         if(proto->RequiredSpell && !sSpellStore.LookupEntry(proto->RequiredSpell))
@@ -1843,7 +1877,13 @@ void ObjectMgr::LoadAuctionItems()
     QueryResult *result = CharacterDatabase.Query( "SELECT data,itemguid,item_template FROM auctionhouse JOIN item_instance ON itemguid = guid" );
 
     if( !result )
+    {
+        barGoLink bar(1);
+        bar.step();
+        sLog.outString("");
+        sLog.outString(">> Loaded 0 auction items");
         return;
+    }
 
     barGoLink bar( result->GetRowCount() );
 
@@ -1878,7 +1918,6 @@ void ObjectMgr::LoadAuctionItems()
         ++count;
     }
     while( result->NextRow() );
-
     delete result;
 
     sLog.outString();
@@ -4370,14 +4409,27 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
     //                                                     0  1           2      3        4          5         6           7   8       9
     QueryResult* result = CharacterDatabase.PQuery("SELECT id,messageType,sender,receiver,itemTextId,has_items,expire_time,cod,checked,mailTemplateId FROM mail WHERE expire_time < '" I64FMTD "'", (uint64)basetime);
     if ( !result )
+    {
+        barGoLink bar(1);
+        bar.step();
+        sLog.outString("");
+        sLog.outString(">> Only expired mails (need to be return or delete) or DB table `mail` is empty.");
         return;                                             // any mails need to be returned or deleted
-    Field *fields;
+    }
+
     //std::ostringstream delitems, delmails; //will be here for optimization
     //bool deletemail = false, deleteitem = false;
     //delitems << "DELETE FROM item_instance WHERE guid IN ( ";
     //delmails << "DELETE FROM mail WHERE id IN ( "
+
+    barGoLink bar( result->GetRowCount() );
+    uint32 count = 0;
+    Field *fields;
+
     do
     {
+        bar.step();
+
         fields = result->Fetch();
         Mail *m = new Mail;
         m->messageID = fields[0].GetUInt32();
@@ -4443,8 +4495,12 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
         //delmails << m->messageID << ", ";
         CharacterDatabase.PExecute("DELETE FROM mail WHERE id = '%u'", m->messageID);
         delete m;
+        ++count;
     } while (result->NextRow());
     delete result;
+
+    sLog.outString();
+    sLog.outString( ">> Loaded %u mails", count );
 }
 
 void ObjectMgr::LoadQuestAreaTriggers()
@@ -5125,9 +5181,6 @@ void ObjectMgr::SetHighestGuids()
         m_hiCreatureGuid = (*result)[0].GetUInt32()+1;
         delete result;
     }
-
-    // pet guids are not saved to DB, set to 0 (pet guid != pet id)
-    m_hiPetGuid = 0;
 
     result = CharacterDatabase.Query( "SELECT MAX(guid) FROM item_instance" );
     if( result )
@@ -6082,17 +6135,35 @@ void ObjectMgr::LoadReservedPlayersNames()
         bar.step();
         fields = result->Fetch();
         std::string name= fields[0].GetCppString();
-        if(normalizePlayerName(name))
+
+        std::wstring wstr;
+        if(!Utf8toWStr (name,wstr))
         {
-            m_ReservedNames.insert(name);
-            ++count;
+            sLog.outError("Table `reserved_name` have invalid name: %s", name.c_str() );
+            continue;
         }
+
+        wstrToLower(wstr);
+
+        m_ReservedNames.insert(wstr);
+        ++count;
     } while ( result->NextRow() );
 
     delete result;
 
     sLog.outString();
     sLog.outString( ">> Loaded %u reserved player names", count );
+}
+
+bool ObjectMgr::IsReservedName( const std::string& name ) const
+{
+    std::wstring wstr;
+    if(!Utf8toWStr (name,wstr))
+        return false;
+
+    wstrToLower(wstr);
+
+    return m_ReservedNames.find(wstr) != m_ReservedNames.end();
 }
 
 enum LanguageType
@@ -6272,6 +6343,11 @@ void ObjectMgr::LoadBattleMastersEntry()
 
         uint32 entry = fields[0].GetUInt32();
         uint32 bgTypeId  = fields[1].GetUInt32();
+        if (bgTypeId >= MAX_BATTLEGROUND_TYPE_ID)
+        {
+            sLog.outErrorDb("Table `battlemaster_entry` contain entry %u for not existed battleground type %u, ignored.",entry,bgTypeId);
+            continue;
+        }
 
         mBattleMastersMap[entry] = bgTypeId;
 
@@ -6287,11 +6363,22 @@ void ObjectMgr::LoadGameObjectForQuests()
 {
     mGameObjectForQuestSet.clear();                         // need for reload case
 
+    if( !sGOStorage.MaxEntry )
+    {
+        barGoLink bar( 1 );
+        bar.step();
+        sLog.outString();
+        sLog.outString( ">> Loaded 0 GameObjects for quests" );
+        return;
+    }
+
+    barGoLink bar( sGOStorage.MaxEntry - 1 );
     uint32 count = 0;
 
     // collect GO entries for GO that must activated
     for(uint32 go_entry = 1; go_entry < sGOStorage.MaxEntry; ++go_entry)
     {
+        bar.step();
         GameObjectInfo const* goInfo = sGOStorage.LookupEntry<GameObjectInfo>(go_entry);
         if(!goInfo)
             continue;
@@ -6326,7 +6413,7 @@ void ObjectMgr::LoadGameObjectForQuests()
     }
 
     sLog.outString();
-    sLog.outString( ">> Loaded %u GameObject for quests", count );
+    sLog.outString( ">> Loaded %u GameObjects for quests", count );
 }
 
 bool ObjectMgr::LoadMangosStrings(DatabaseType& db, char const* table, int32 min_value, int32 max_value)
@@ -6818,11 +6905,10 @@ void ObjectMgr::LoadGameTele()
         ++count;
     }
     while (result->NextRow());
-
     delete result;
 
     sLog.outString();
-    sLog.outString( ">> Loaded %u game tele's", count );
+    sLog.outString( ">> Loaded %u GameTeleports", count );
 }
 
 GameTele const* ObjectMgr::GetGameTele(const std::string& name) const
@@ -6958,14 +7044,13 @@ void ObjectMgr::LoadTrainerSpell()
 
         TrainerSpell* pTrainerSpell = new TrainerSpell();
         pTrainerSpell->spell         = spell;
-        pTrainerSpell->spellcost     = fields[2].GetUInt32();
-        pTrainerSpell->reqskill      = fields[3].GetUInt32();
-        pTrainerSpell->reqskillvalue = fields[4].GetUInt32();
-        pTrainerSpell->reqlevel      = fields[5].GetUInt32();
+        pTrainerSpell->spellCost     = fields[2].GetUInt32();
+        pTrainerSpell->reqSkill      = fields[3].GetUInt32();
+        pTrainerSpell->reqSkillValue = fields[4].GetUInt32();
+        pTrainerSpell->reqLevel      = fields[5].GetUInt32();
 
-        if(!pTrainerSpell->reqlevel)
-            pTrainerSpell->reqlevel = spellinfo->spellLevel;
-
+        if(!pTrainerSpell->reqLevel)
+            pTrainerSpell->reqLevel = spellinfo->spellLevel;
 
         TrainerSpellData& data = m_mCacheTrainerSpellMap[entry];
 
@@ -6979,7 +7064,7 @@ void ObjectMgr::LoadTrainerSpell()
     delete result;
 
     sLog.outString();
-    sLog.outString( ">> Loaded Trainers %d", count );
+    sLog.outString( ">> Loaded %d Trainers", count );
 }
 
 void ObjectMgr::LoadVendors()
@@ -7257,16 +7342,30 @@ void ObjectMgr::LoadScriptNames()
       "SELECT DISTINCT(ScriptName) FROM areatrigger_scripts WHERE ScriptName <> '' "
       "UNION "
       "SELECT DISTINCT(script) FROM instance_template WHERE script <> ''");
-    if(result)
+
+    if( !result )
     {
-        do
-        {
-            m_scriptNames.push_back((*result)[0].GetString());
-        } while (result->NextRow());
-        delete result;
+        barGoLink bar( 1 );
+        bar.step();
+        sLog.outString();
+        sLog.outErrorDb(">> Loaded empty set of Script Names!");
+        return;
     }
 
+    barGoLink bar( result->GetRowCount() );
+    uint32 count = 0;
+
+    do
+    {
+        bar.step();
+        m_scriptNames.push_back((*result)[0].GetString());
+        ++count;
+    } while (result->NextRow());
+    delete result;
+
     std::sort(m_scriptNames.begin(), m_scriptNames.end());
+    sLog.outString();
+    sLog.outString( ">> Loaded %d Script Names", count );
 }
 
 uint32 ObjectMgr::GetScriptId(const char *name)

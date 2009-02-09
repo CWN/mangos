@@ -1830,11 +1830,9 @@ void Spell::EffectTriggerSpell(uint32 i)
             {
                 // remove all harmful spells on you...
                 if( // ignore positive and passive auras
-                    !iter->second->IsPositive() && !iter->second->IsPassive()    &&
+                    !iter->second->IsPositive() && !iter->second->IsPassive() &&
                     // ignore physical auras
-                    (GetSpellSchoolMask(iter->second->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL)==0 &&
-                    // ignore immunity persistent spells
-                    !( iter->second->GetSpellProto()->AttributesEx & 0x10000 ) )
+                    (GetSpellSchoolMask(iter->second->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL)==0 )
                 {
                     m_caster->RemoveAurasDueToSpell(iter->second->GetSpellProto()->Id);
                     iter = Auras.begin();
@@ -3523,7 +3521,7 @@ void Spell::EffectAddFarsight(uint32 i)
     m_caster->AddDynObject(dynObj);
     dynObj->GetMap()->Add(dynObj);
     if(m_caster->GetTypeId() == TYPEID_PLAYER)
-        ((Player*)m_caster)->SetFarSight(dynObj->GetGUID());
+        ((Player*)m_caster)->SetFarSightGUID(dynObj->GetGUID());
 }
 
 void Spell::EffectSummonWild(uint32 i)

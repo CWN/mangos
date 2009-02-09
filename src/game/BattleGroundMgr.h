@@ -173,7 +173,7 @@ class BattleGroundMgr
         /* Construction */
         BattleGroundMgr();
         ~BattleGroundMgr();
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
         /* Packet Building */
         void BuildPlayerJoinedBattleGroundPacket(WorldPacket *data, Player *plr);
@@ -205,8 +205,8 @@ class BattleGroundMgr
 
         uint32 CreateBattleGround(uint32 bgTypeId, uint32 MinPlayersPerTeam, uint32 MaxPlayersPerTeam, uint32 LevelMin, uint32 LevelMax, char* BattleGroundName, uint32 MapID, float Team1StartLocX, float Team1StartLocY, float Team1StartLocZ, float Team1StartLocO, float Team2StartLocX, float Team2StartLocY, float Team2StartLocZ, float Team2StartLocO);
 
-        inline void AddBattleGround(uint32 ID, BattleGround* BG) { m_BattleGrounds[ID] = BG; };
-        inline void RemoveBattleGround(uint32 instanceID) { m_BattleGrounds.erase(instanceID); }
+        void AddBattleGround(uint32 ID, BattleGround* BG) { m_BattleGrounds[ID] = BG; };
+        void RemoveBattleGround(uint32 instanceID) { m_BattleGrounds.erase(instanceID); }
 
         void CreateInitialBattleGrounds();
 
@@ -225,8 +225,10 @@ class BattleGroundMgr
         void InitAutomaticArenaPointDistribution();
         void DistributeArenaPoints();
         void ToggleArenaTesting();
+        void ToggleTesting();
 
         bool isArenaTesting() const { return m_ArenaTesting; }
+        bool isTesting() const { return m_Testing; }
 
         static bool IsArenaType(uint32 bgTypeId);
         static bool IsBattleGroundType(uint32 bgTypeId) { return !BattleGroundMgr::IsArenaType(bgTypeId); }
@@ -241,6 +243,7 @@ class BattleGroundMgr
         uint64 m_NextAutoDistributionTime;
         uint32 m_AutoDistributionTimeChecker;
         bool   m_ArenaTesting;
+        bool   m_Testing;
 };
 
 #define sBattleGroundMgr MaNGOS::Singleton<BattleGroundMgr>::Instance()

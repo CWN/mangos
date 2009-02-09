@@ -119,6 +119,7 @@ enum WorldConfigs
     CONFIG_MAX_PRIMARY_TRADE_SKILL,
     CONFIG_MIN_PETITION_SIGNS,
     CONFIG_GM_LOGIN_STATE,
+    CONFIG_GM_VISIBLE_STATE,
     CONFIG_GM_ACCEPT_TICKETS,
     CONFIG_GM_CHAT,
     CONFIG_GM_WISPERING_TO,
@@ -420,9 +421,9 @@ class World
         static void StopNow(uint8 exitcode) { m_stopEvent = true; m_ExitCode = exitcode; }
         static bool IsStopped() { return m_stopEvent; }
 
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
-        void UpdateSessions( time_t diff );
+        void UpdateSessions( uint32 diff );
         /// Set a server rate (see #Rates)
         void setRate(Rates rate,float value) { rate_values[rate]=value; }
         /// Get a server rate (see #Rates)

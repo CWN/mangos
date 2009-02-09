@@ -712,6 +712,7 @@ void AreaAura::Update(uint32 diff)
                     if(actualSpellInfo != GetSpellProto())
                         actualBasePoints = actualSpellInfo->EffectBasePoints[m_effIndex];
                     AreaAura *aur = new AreaAura(actualSpellInfo, m_effIndex, &actualBasePoints, (*tIter), caster, NULL);
+                    aur->SetAuraDuration(GetAuraDuration());
                     (*tIter)->AddAura(aur);
                 }
             }
@@ -1420,26 +1421,10 @@ void Aura::TriggerSpell()
                             Creature* creature = (Creature*)target;
                             // missing lootid has been reported on startup - just return
                             if (!creature->GetCreatureInfo()->SkinLootId)
-                            {
                                 return;
-                            }
-                            Loot *loot = &creature->loot;
-                            loot->clear();
-                            loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, NULL);
-                            for(uint8 i=0;i<loot->items.size();i++)
-                            {
-                                LootItem *item = loot->LootItemInSlot(i,player);
-                                ItemPosCountVec dest;
-                                uint8 msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, item->itemid, item->count );
-                                if ( msg == EQUIP_ERR_OK )
-                                {
-                                    Item * newitem = player->StoreNewItem( dest, item->itemid, true, item->randomPropertyId);
 
-                                    player->SendNewItem(newitem, uint32(item->count), false, false, true);
-                                }
-                                else
-                                    player->SendEquipError( msg, NULL, NULL );
-                            }
+                            player->AutoStoreLoot(creature->GetCreatureInfo()->SkinLootId,LootTemplates_Skinning,true);
+
                             creature->setDeathState(JUST_DIED);
                             creature->RemoveCorpse();
                             creature->SetHealth(0);         // just for nice GM-mode view
@@ -1975,7 +1960,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             ( GetSpellProto()->EffectApplyAuraName[0]==1 || GetSpellProto()->EffectApplyAuraName[0]==128 ) ) )
         {
             // spells with SpellEffect=72 and aura=4: 6196, 6197, 21171, 21425
-            ((Player*)m_target)->SetFarSight(NULL);
+            ((Player*)m_target)->SetFarSightGUID(0);
             WorldPacket data(SMSG_CLEAR_FAR_SIGHT_IMMEDIATE, 0);
             ((Player*)m_target)->GetSession()->SendPacket(&data);
             return;
@@ -2845,7 +2830,7 @@ void Aura::HandleBindSight(bool apply, bool Real)
     if(!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    ((Player*)caster)->SetFarSight(apply ? m_target->GetGUID() : NULL);
+    ((Player*)caster)->SetFarSightGUID(apply ? m_target->GetGUID() : 0);
 }
 
 void Aura::HandleFarSight(bool apply, bool Real)
@@ -2854,7 +2839,7 @@ void Aura::HandleFarSight(bool apply, bool Real)
     if(!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    ((Player*)caster)->SetFarSight(apply ? m_target->GetGUID() : NULL);
+    ((Player*)caster)->SetFarSightGUID(apply ? m_target->GetGUID() : 0);
 }
 
 void Aura::HandleAuraTrackCreatures(bool apply, bool Real)
@@ -2960,7 +2945,7 @@ void Aura::HandleModPossess(bool apply, bool Real)
         }
     }
     if(caster->GetTypeId() == TYPEID_PLAYER)
-        ((Player*)caster)->SetFarSight(apply ? m_target->GetGUID() : NULL);
+        ((Player*)caster)->SetFarSightGUID(apply ? m_target->GetGUID() : 0);
 }
 
 void Aura::HandleModPossessPet(bool apply, bool Real)
@@ -2971,7 +2956,9 @@ void Aura::HandleModPossessPet(bool apply, bool Real)
     Unit* caster = GetCaster();
     if(!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
-    if(caster->GetPet() != m_target)
+
+    Pet *pet = caster->GetPet();
+    if(!pet || pet != m_target)
         return;
 
     if(apply)

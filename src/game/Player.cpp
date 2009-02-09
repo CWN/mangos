@@ -3445,7 +3445,7 @@ void Player::DestroyForPlayer( Player *target ) const
 
 bool Player::HasSpell(uint32 spell) const
 {
-    PlayerSpellMap::const_iterator itr = m_spells.find((uint16)spell);
+    PlayerSpellMap::const_iterator itr = m_spells.find(spell);
     return (itr != m_spells.end() && itr->second->state != PLAYERSPELL_REMOVED && !itr->second->disabled);
 }
 
@@ -3466,7 +3466,7 @@ TrainerSpellState Player::GetTrainerSpellState(TrainerSpell const* trainer_spell
         return TRAINER_SPELL_RED;
 
     // check level requirement
-    if(getLevel() < trainer_spell->reqlevel)
+    if(getLevel() < trainer_spell->reqLevel)
         return TRAINER_SPELL_RED;
 
     if(SpellChainNode const* spell_chain = spellmgr.GetSpellChainNode(trainer_spell->spell))
@@ -3481,7 +3481,7 @@ TrainerSpellState Player::GetTrainerSpellState(TrainerSpell const* trainer_spell
     }
 
     // check skill requirement
-    if(trainer_spell->reqskill && GetBaseSkillValue(trainer_spell->reqskill) < trainer_spell->reqskillvalue)
+    if(trainer_spell->reqSkill && GetBaseSkillValue(trainer_spell->reqSkill) < trainer_spell->reqSkillValue)
         return TRAINER_SPELL_RED;
 
     // exist, already checked at loading
@@ -3830,8 +3830,7 @@ void Player::CreateCorpse()
     Corpse *corpse = new Corpse( (m_ExtraFlags & PLAYER_EXTRA_PVP_DEATH) ? CORPSE_RESURRECTABLE_PVP : CORPSE_RESURRECTABLE_PVE );
     SetPvPDeath(false);
 
-    if(!corpse->Create(objmgr.GenerateLowGuid(HIGHGUID_CORPSE), this, GetMapId(), GetPositionX(),
-        GetPositionY(), GetPositionZ(), GetOrientation()))
+    if(!corpse->Create(objmgr.GenerateLowGuid(HIGHGUID_CORPSE), this))
     {
         delete corpse;
         return;
@@ -7159,11 +7158,11 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 sLog.outDebug("       if(lootid)");
                 loot->clear();
-                loot->FillLoot(lootid, LootTemplates_Gameobject, this);
+                loot->FillLoot(lootid, LootTemplates_Gameobject, this, false);
             }
 
             if(loot_type == LOOT_FISHING)
-                go->getFishLoot(loot);
+                go->getFishLoot(loot,this);
 
             go->SetLootState(GO_ACTIVATED);
         }
@@ -7186,7 +7185,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetProto()->DisenchantID, LootTemplates_Disenchant, this);
+                loot->FillLoot(item->GetProto()->DisenchantID, LootTemplates_Disenchant, this,true);
             }
         }
         else if(loot_type == LOOT_PROSPECTING)
@@ -7197,7 +7196,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetEntry(), LootTemplates_Prospecting, this);
+                loot->FillLoot(item->GetEntry(), LootTemplates_Prospecting, this,true);
             }
         }
         else
@@ -7208,7 +7207,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetEntry(), LootTemplates_Item, this);
+                loot->FillLoot(item->GetEntry(), LootTemplates_Item, this,true);
 
                 loot->generateMoneyLoot(item->GetProto()->MinMoneyLoot,item->GetProto()->MaxMoneyLoot);
             }
@@ -7266,7 +7265,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
                 loot->clear();
 
                 if (uint32 lootid = creature->GetCreatureInfo()->pickpocketLootId)
-                    loot->FillLoot(lootid, LootTemplates_Pickpocketing, this);
+                    loot->FillLoot(lootid, LootTemplates_Pickpocketing, this, false);
 
                 // Generate extra money for pick pocket loot
                 const uint32 a = urand(0, creature->getLevel()/2);
@@ -7296,7 +7295,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
                 loot->clear();
 
                 if (uint32 lootid = creature->GetCreatureInfo()->lootid)
-                    loot->FillLoot(lootid, LootTemplates_Creature, recipient);
+                    loot->FillLoot(lootid, LootTemplates_Creature, recipient, false);
 
                 loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
 
@@ -7326,7 +7325,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             if (loot_type == LOOT_SKINNING)
             {
                 loot->clear();
-                loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this);
+                loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, false);
             }
             // set group rights only for loot_type != LOOT_SKINNING
             else
@@ -7360,39 +7359,6 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
 
     SetLootGUID(guid);
 
-    QuestItemList *q_list = 0;
-    if (permission != NONE_PERMISSION)
-    {
-        QuestItemMap const& lootPlayerQuestItems = loot->GetPlayerQuestItems();
-        QuestItemMap::const_iterator itr = lootPlayerQuestItems.find(GetGUIDLow());
-        if (itr == lootPlayerQuestItems.end())
-            q_list = loot->FillQuestLoot(this);
-        else
-            q_list = itr->second;
-    }
-
-    QuestItemList *ffa_list = 0;
-    if (permission != NONE_PERMISSION)
-    {
-        QuestItemMap const& lootPlayerFFAItems = loot->GetPlayerFFAItems();
-        QuestItemMap::const_iterator itr = lootPlayerFFAItems.find(GetGUIDLow());
-        if (itr == lootPlayerFFAItems.end())
-            ffa_list = loot->FillFFALoot(this);
-        else
-            ffa_list = itr->second;
-    }
-
-    QuestItemList *conditional_list = 0;
-    if (permission != NONE_PERMISSION)
-    {
-        QuestItemMap const& lootPlayerNonQuestNonFFAConditionalItems = loot->GetPlayerNonQuestNonFFAConditionalItems();
-        QuestItemMap::const_iterator itr = lootPlayerNonQuestNonFFAConditionalItems.find(GetGUIDLow());
-        if (itr == lootPlayerNonQuestNonFFAConditionalItems.end())
-            conditional_list = loot->FillNonQuestNonFFAConditionalLoot(this);
-        else
-            conditional_list = itr->second;
-    }
-
     // LOOT_PICKPOCKETING, LOOT_PROSPECTING, LOOT_DISENCHANTING and LOOT_INSIGNIA unsupported by client, sending LOOT_SKINNING instead
     if(loot_type == LOOT_PICKPOCKETING || loot_type == LOOT_DISENCHANTING || loot_type == LOOT_PROSPECTING || loot_type == LOOT_INSIGNIA)
         loot_type = LOOT_SKINNING;
@@ -7404,7 +7370,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
 
     data << uint64(guid);
     data << uint8(loot_type);
-    data << LootView(*loot, q_list, ffa_list, conditional_list, this, permission);
+    data << LootView(*loot, this, permission);
 
     SendDirectMessage(&data);
 
@@ -9581,29 +9547,17 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
     // in specific slot
     if( bag != NULL_BAG && slot != NULL_SLOT )
     {
-        if( pProto->InventoryType == INVTYPE_BAG )
+        if( slot >= BANK_SLOT_BAG_START && slot < BANK_SLOT_BAG_END )
         {
-            Bag *pBag = (Bag*)pItem;
-            if( pBag )
-            {
-                if( slot >= BANK_SLOT_BAG_START && slot < BANK_SLOT_BAG_END )
-                {
-                    if( !HasBankBagSlot( slot ) )
-                        return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
-                    if( uint8 cantuse = CanUseItem( pItem, not_loading ) != EQUIP_ERR_OK )
-                        return cantuse;
-                }
-                else
-                {
-                    if( !pBag->IsEmpty() )
-                        return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
-                }
-            }
-        }
-        else
-        {
-            if( slot >= BANK_SLOT_BAG_START && slot < BANK_SLOT_BAG_END )
+            if (!pItem->IsBag())
                 return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+
+            Bag *pBag = (Bag*)pItem;
+            if( !HasBankBagSlot( slot ) )
+                return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
+
+            if( uint8 cantuse = CanUseItem( pItem, not_loading ) != EQUIP_ERR_OK )
+                return cantuse;
         }
 
         res = _CanStoreItem_InSpecificSlot(bag,slot,dest,pProto,count,swap,pItem);
@@ -10760,6 +10714,8 @@ void Player::SwapItem( uint16 src, uint16 dst )
         return;
     }
 
+    // SRC checks
+
     if(pSrcItem->m_lootGenerated)                           // prevent swap looting item
     {
         //best error message found for attempting to swap while looting
@@ -10770,8 +10726,8 @@ void Player::SwapItem( uint16 src, uint16 dst )
     // check unequip potability for equipped items and bank bags
     if(IsEquipmentPos ( src ) || IsBagPos ( src ))
     {
-        // bags can be swapped with empty bag slots
-        uint8 msg = CanUnequipItem( src, !IsBagPos ( src ) || IsBagPos ( dst ));
+        // bags can be swapped with empty bag slots, or with empty bag (items move possibility checked later)
+        uint8 msg = CanUnequipItem( src, !IsBagPos ( src ) || IsBagPos ( dst ) || pDstItem && pDstItem->IsBag() && ((Bag*)pDstItem)->IsEmpty());
         if(msg != EQUIP_ERR_OK)
         {
             SendEquipError( msg, pSrcItem, pDstItem );
@@ -10786,6 +10742,34 @@ void Player::SwapItem( uint16 src, uint16 dst )
         return;
     }
 
+    // DST checks
+
+    if (pDstItem)
+    {
+        if(pDstItem->m_lootGenerated)                       // prevent swap looting item
+        {
+            //best error message found for attempting to swap while looting
+            SendEquipError( EQUIP_ERR_CANT_DO_RIGHT_NOW, pDstItem, NULL );
+            return;
+        }
+
+        // check unequip potability for equipped items and bank bags
+        if(IsEquipmentPos ( dst ) || IsBagPos ( dst ))
+        {
+            // bags can be swapped with empty bag slots, or with empty bag (items move possibility checked later)
+            uint8 msg = CanUnequipItem( dst, !IsBagPos ( dst ) || IsBagPos ( src ) || pSrcItem->IsBag() && ((Bag*)pSrcItem)->IsEmpty());
+            if(msg != EQUIP_ERR_OK)
+            {
+                SendEquipError( msg, pSrcItem, pDstItem );
+                return;
+            }
+        }
+    }
+
+    // NOW this is or item move (swap with empty), or swap with another item (including bags in bag possitions)
+    // or swap empty bag with another empty or not empty bag (with items exchange)
+
+    // Move case
     if( !pDstItem )
     {
         if( IsInventoryPos( dst ) )
@@ -10828,140 +10812,187 @@ void Player::SwapItem( uint16 src, uint16 dst )
             EquipItem( dest, pSrcItem, true);
             AutoUnequipOffhandIfNeed();
         }
+
+        return;
     }
-    else                                                    // if (!pDstItem)
+
+    // attempt merge to / fill target item
+    if(!pSrcItem->IsBag() && !pDstItem->IsBag())
     {
-        if(pDstItem->m_lootGenerated)                       // prevent swap looting item
-        {
-            //best error message found for attempting to swap while looting
-            SendEquipError( EQUIP_ERR_CANT_DO_RIGHT_NOW, pDstItem, NULL );
-            return;
-        }
-
-        // check unequip potability for equipped items and bank bags
-        if(IsEquipmentPos ( dst ) || IsBagPos ( dst ))
-        {
-            // bags can be swapped with empty bag slots
-            uint8 msg = CanUnequipItem( dst, !IsBagPos ( dst ) || IsBagPos ( src ) );
-            if(msg != EQUIP_ERR_OK)
-            {
-                SendEquipError( msg, pSrcItem, pDstItem );
-                return;
-            }
-        }
-
-        // attempt merge to / fill target item
-        {
-            uint8 msg;
-            ItemPosCountVec sDest;
-            uint16 eDest;
-            if( IsInventoryPos( dst ) )
-                msg = CanStoreItem( dstbag, dstslot, sDest, pSrcItem, false );
-            else if( IsBankPos ( dst ) )
-                msg = CanBankItem( dstbag, dstslot, sDest, pSrcItem, false );
-            else if( IsEquipmentPos ( dst ) )
-                msg = CanEquipItem( dstslot, eDest, pSrcItem, false );
-            else
-                return;
-
-            // can be merge/fill
-            if(msg == EQUIP_ERR_OK)
-            {
-                if( pSrcItem->GetCount() + pDstItem->GetCount() <= pSrcItem->GetProto()->Stackable )
-                {
-                    RemoveItem(srcbag, srcslot, true);
-
-                    if( IsInventoryPos( dst ) )
-                        StoreItem( sDest, pSrcItem, true);
-                    else if( IsBankPos ( dst ) )
-                        BankItem( sDest, pSrcItem, true);
-                    else if( IsEquipmentPos ( dst ) )
-                    {
-                        EquipItem( eDest, pSrcItem, true);
-                        AutoUnequipOffhandIfNeed();
-                    }
-                }
-                else
-                {
-                    pSrcItem->SetCount( pSrcItem->GetCount() + pDstItem->GetCount() - pSrcItem->GetProto()->Stackable );
-                    pDstItem->SetCount( pSrcItem->GetProto()->Stackable );
-                    pSrcItem->SetState(ITEM_CHANGED, this);
-                    pDstItem->SetState(ITEM_CHANGED, this);
-                    if( IsInWorld() )
-                    {
-                        pSrcItem->SendUpdateToPlayer( this );
-                        pDstItem->SendUpdateToPlayer( this );
-                    }
-                }
-                return;
-            }
-        }
-
-        // impossible merge/fill, do real swap
         uint8 msg;
-
-        // check src->dest move possibility
         ItemPosCountVec sDest;
         uint16 eDest;
         if( IsInventoryPos( dst ) )
-            msg = CanStoreItem( dstbag, dstslot, sDest, pSrcItem, true );
-        else if( IsBankPos( dst ) )
-            msg = CanBankItem( dstbag, dstslot, sDest, pSrcItem, true );
-        else if( IsEquipmentPos( dst ) )
-        {
-            msg = CanEquipItem( dstslot, eDest, pSrcItem, true );
-            if( msg == EQUIP_ERR_OK )
-                msg = CanUnequipItem( eDest, true );
-        }
+            msg = CanStoreItem( dstbag, dstslot, sDest, pSrcItem, false );
+        else if( IsBankPos ( dst ) )
+            msg = CanBankItem( dstbag, dstslot, sDest, pSrcItem, false );
+        else if( IsEquipmentPos ( dst ) )
+            msg = CanEquipItem( dstslot, eDest, pSrcItem, false );
+        else
+            return;
 
-        if( msg != EQUIP_ERR_OK )
+        // can be merge/fill
+        if(msg == EQUIP_ERR_OK)
         {
-            SendEquipError( msg, pSrcItem, pDstItem );
+            if( pSrcItem->GetCount() + pDstItem->GetCount() <= pSrcItem->GetProto()->GetMaxStackSize())
+            {
+                RemoveItem(srcbag, srcslot, true);
+
+                if( IsInventoryPos( dst ) )
+                    StoreItem( sDest, pSrcItem, true);
+                else if( IsBankPos ( dst ) )
+                    BankItem( sDest, pSrcItem, true);
+                else if( IsEquipmentPos ( dst ) )
+                {
+                    EquipItem( eDest, pSrcItem, true);
+                    AutoUnequipOffhandIfNeed();
+                }
+            }
+            else
+            {
+                pSrcItem->SetCount( pSrcItem->GetCount() + pDstItem->GetCount() - pSrcItem->GetProto()->GetMaxStackSize());
+                pDstItem->SetCount( pSrcItem->GetProto()->GetMaxStackSize());
+                pSrcItem->SetState(ITEM_CHANGED, this);
+                pDstItem->SetState(ITEM_CHANGED, this);
+                if( IsInWorld() )
+                {
+                    pSrcItem->SendUpdateToPlayer( this );
+                    pDstItem->SendUpdateToPlayer( this );
+                }
+            }
             return;
         }
-
-        // check dest->src move possibility
-        ItemPosCountVec sDest2;
-        uint16 eDest2;
-        if( IsInventoryPos( src ) )
-            msg = CanStoreItem( srcbag, srcslot, sDest2, pDstItem, true );
-        else if( IsBankPos( src ) )
-            msg = CanBankItem( srcbag, srcslot, sDest2, pDstItem, true );
-        else if( IsEquipmentPos( src ) )
-        {
-            msg = CanEquipItem( srcslot, eDest2, pDstItem, true);
-            if( msg == EQUIP_ERR_OK )
-                msg = CanUnequipItem( eDest2, true);
-        }
-
-        if( msg != EQUIP_ERR_OK )
-        {
-            SendEquipError( msg, pDstItem, pSrcItem );
-            return;
-        }
-
-        // now do moves, remove...
-        RemoveItem(dstbag, dstslot, false);
-        RemoveItem(srcbag, srcslot, false);
-
-        // add to dest
-        if( IsInventoryPos( dst ) )
-            StoreItem(sDest, pSrcItem, true);
-        else if( IsBankPos( dst ) )
-            BankItem(sDest, pSrcItem, true);
-        else if( IsEquipmentPos( dst ) )
-            EquipItem(eDest, pSrcItem, true);
-
-        // add to src
-        if( IsInventoryPos( src ) )
-            StoreItem(sDest2, pDstItem, true);
-        else if( IsBankPos( src ) )
-            BankItem(sDest2, pDstItem, true);
-        else if( IsEquipmentPos( src ) )
-            EquipItem(eDest2, pDstItem, true);
-
-        AutoUnequipOffhandIfNeed();
     }
+
+    // impossible merge/fill, do real swap
+    uint8 msg;
+
+    // check src->dest move possibility
+    ItemPosCountVec sDest;
+    uint16 eDest;
+    if( IsInventoryPos( dst ) )
+        msg = CanStoreItem( dstbag, dstslot, sDest, pSrcItem, true );
+    else if( IsBankPos( dst ) )
+        msg = CanBankItem( dstbag, dstslot, sDest, pSrcItem, true );
+    else if( IsEquipmentPos( dst ) )
+    {
+        msg = CanEquipItem( dstslot, eDest, pSrcItem, true );
+        if( msg == EQUIP_ERR_OK )
+            msg = CanUnequipItem( eDest, true );
+    }
+
+    if( msg != EQUIP_ERR_OK )
+    {
+        SendEquipError( msg, pSrcItem, pDstItem );
+        return;
+    }
+
+    // check dest->src move possibility
+    ItemPosCountVec sDest2;
+    uint16 eDest2;
+    if( IsInventoryPos( src ) )
+        msg = CanStoreItem( srcbag, srcslot, sDest2, pDstItem, true );
+    else if( IsBankPos( src ) )
+        msg = CanBankItem( srcbag, srcslot, sDest2, pDstItem, true );
+    else if( IsEquipmentPos( src ) )
+    {
+        msg = CanEquipItem( srcslot, eDest2, pDstItem, true);
+        if( msg == EQUIP_ERR_OK )
+            msg = CanUnequipItem( eDest2, true);
+    }
+
+    if( msg != EQUIP_ERR_OK )
+    {
+        SendEquipError( msg, pDstItem, pSrcItem );
+        return;
+    }
+
+    // Check bag swap with item exchange (one from empty in not bag possition (equipped (not possible in fact) or store)
+    if(pSrcItem->IsBag() && pDstItem->IsBag())
+    {
+        Bag* emptyBag = NULL;
+        Bag* fullBag = NULL;
+        if(((Bag*)pSrcItem)->IsEmpty() && !IsBagPos(src))
+        {
+            emptyBag = (Bag*)pSrcItem;
+            fullBag  = (Bag*)pDstItem;
+        }
+        else if(((Bag*)pDstItem)->IsEmpty() && !IsBagPos(dst))
+        {
+            emptyBag = (Bag*)pDstItem;
+            fullBag  = (Bag*)pSrcItem;
+        }
+
+        // bag swap (with items exchange) case
+        if(emptyBag && fullBag)
+        {
+            ItemPrototype const* emotyProto = emptyBag->GetProto();
+
+            uint32 count = 0;
+
+            for(int i=0; i < fullBag->GetBagSize(); ++i)
+            {
+                Item *bagItem = fullBag->GetItemByPos(i);
+                if (!bagItem)
+                    continue;
+
+                ItemPrototype const* bagItemProto = bagItem->GetProto();
+                if (!bagItemProto || !ItemCanGoIntoBag(bagItemProto, emotyProto))
+                {
+                    // one from items not go to empry target bag
+                    SendEquipError( EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG, pSrcItem, pDstItem );
+                    return;
+                }
+
+                ++count;
+            }
+
+
+            if (count > emptyBag->GetBagSize())
+            {
+                // too small targeted bag
+                SendEquipError( EQUIP_ERR_ITEMS_CANT_BE_SWAPPED, pSrcItem, pDstItem );
+                return;
+            }
+
+            // Items swap
+            count = 0;                                      // will pos in new bag
+            for(int i=0; i< fullBag->GetBagSize(); ++i)
+            {
+                Item *bagItem = fullBag->GetItemByPos(i);
+                if (!bagItem)
+                    continue;
+
+                fullBag->RemoveItem(i, true);
+                emptyBag->StoreItem(count, bagItem, true);
+                bagItem->SetState(ITEM_CHANGED, this);
+
+                ++count;
+            }
+        }
+    }
+
+    // now do moves, remove...
+    RemoveItem(dstbag, dstslot, false);
+    RemoveItem(srcbag, srcslot, false);
+
+    // add to dest
+    if( IsInventoryPos( dst ) )
+        StoreItem(sDest, pSrcItem, true);
+    else if( IsBankPos( dst ) )
+        BankItem(sDest, pSrcItem, true);
+    else if( IsEquipmentPos( dst ) )
+        EquipItem(eDest, pSrcItem, true);
+
+    // add to src
+    if( IsInventoryPos( src ) )
+        StoreItem(sDest2, pDstItem, true);
+    else if( IsBankPos( src ) )
+        BankItem(sDest2, pDstItem, true);
+    else if( IsEquipmentPos( src ) )
+        EquipItem(eDest2, pDstItem, true);
+
+    AutoUnequipOffhandIfNeed();
 }
 
 void Player::AddItemToBuyBackSlot( Item *pItem )
@@ -12027,8 +12058,6 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
 
     // if not exist then created with set uState==NEW and rewarded=false
     QuestStatusData& questStatusData = mQuestStatus[quest_id];
-    if (questStatusData.uState != QUEST_NEW)
-        questStatusData.uState = QUEST_CHANGED;
 
     // check for repeatable quests status reset
     questStatusData.m_status = QUEST_STATUS_INCOMPLETE;
@@ -12036,18 +12065,18 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
 
     if ( pQuest->HasFlag( QUEST_MANGOS_FLAGS_DELIVER ) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
             questStatusData.m_itemcount[i] = 0;
     }
 
     if ( pQuest->HasFlag(QUEST_MANGOS_FLAGS_KILL_OR_CAST | QUEST_MANGOS_FLAGS_SPEAKTO) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
             questStatusData.m_creatureOrGOcount[i] = 0;
     }
 
     GiveQuestSourceItem( pQuest );
-    AdjustQuestReqItemCount( pQuest );
+    AdjustQuestReqItemCount( pQuest, questStatusData );
 
     if( pQuest->GetRepObjectiveFaction() )
         SetFactionVisibleForFactionId(pQuest->GetRepObjectiveFaction());
@@ -12069,6 +12098,9 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
         questStatusData.m_timer = 0;
 
     SetQuestSlot(log_slot, quest_id, qtime);
+
+    if (questStatusData.uState != QUEST_NEW)
+        questStatusData.uState = QUEST_CHANGED;
 
     //starting initial quest script
     if(questGiver && pQuest->GetQuestStartScript()!=0)
@@ -12218,26 +12250,15 @@ void Player::RewardQuest( Quest const *pQuest, uint32 reward, Object* questGiver
 
         Loot questMailLoot;
 
-        questMailLoot.FillLoot(pQuest->GetQuestId(), LootTemplates_QuestMail, this);
+        questMailLoot.FillLoot(pQuest->GetQuestId(), LootTemplates_QuestMail, this,true);
 
         // fill mail
         MailItemsInfo mi;                                   // item list preparing
 
-        for(size_t i = 0; mi.size() < MAX_MAIL_ITEMS && i < questMailLoot.items.size(); ++i)
+        uint32 max_slot = questMailLoot.GetMaxSlotInLootFor(this);
+        for(uint32 i = 0; mi.size() < MAX_MAIL_ITEMS && i < max_slot; ++i)
         {
             if(LootItem* lootitem = questMailLoot.LootItemInSlot(i,this))
-            {
-                if(Item* item = Item::CreateItem(lootitem->itemid,lootitem->count,this))
-                {
-                    item->SaveToDB();                       // save for prevent lost at next mail load, if send fail then item will deleted
-                    mi.AddItem(item->GetGUIDLow(), item->GetEntry(), item);
-                }
-            }
-        }
-
-        for(size_t i = 0; mi.size() < MAX_MAIL_ITEMS && i < questMailLoot.quest_items.size(); ++i)
-        {
-            if(LootItem* lootitem = questMailLoot.LootItemInSlot(i+questMailLoot.items.size(),this))
             {
                 if(Item* item = Item::CreateItem(lootitem->itemid,lootitem->count,this))
                 {
@@ -12288,8 +12309,9 @@ void Player::FailTimedQuest( uint32 quest_id )
     {
         QuestStatusData& q_status = mQuestStatus[quest_id];
 
-        if (q_status.uState != QUEST_NEW) q_status.uState = QUEST_CHANGED;
         q_status.m_timer = 0;
+        if (q_status.uState != QUEST_NEW)
+            q_status.uState = QUEST_CHANGED;
 
         IncompleteQuest( quest_id );
 
@@ -12775,18 +12797,18 @@ uint32 Player::GetReqKillOrCastCurrentCount(uint32 quest_id, int32 entry)
     if( !qInfo )
         return 0;
 
-    for (int j = 0; j < QUEST_OBJECTIVES_COUNT; j++)
+    for (int j = 0; j < QUEST_OBJECTIVES_COUNT; ++j)
         if ( qInfo->ReqCreatureOrGOId[j] == entry )
             return mQuestStatus[quest_id].m_creatureOrGOcount[j];
 
     return 0;
 }
 
-void Player::AdjustQuestReqItemCount( Quest const* pQuest )
+void Player::AdjustQuestReqItemCount( Quest const* pQuest, QuestStatusData& questStatusData )
 {
     if ( pQuest->HasFlag( QUEST_MANGOS_FLAGS_DELIVER ) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
         {
             uint32 reqitemcount = pQuest->ReqItemCount[i];
             if( reqitemcount != 0 )
@@ -12794,9 +12816,8 @@ void Player::AdjustQuestReqItemCount( Quest const* pQuest )
                 uint32 quest_id = pQuest->GetQuestId();
                 uint32 curitemcount = GetItemCount(pQuest->ReqItemId[i],true);
 
-                QuestStatusData& q_status = mQuestStatus[quest_id];
-                q_status.m_itemcount[i] = std::min(curitemcount, reqitemcount);
-                if (q_status.uState != QUEST_NEW) q_status.uState = QUEST_CHANGED;
+                questStatusData.m_itemcount[i] = std::min(curitemcount, reqitemcount);
+                if (questStatusData.uState != QUEST_NEW) questStatusData.uState = QUEST_CHANGED;
             }
         }
     }
@@ -13776,12 +13797,12 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
     // clear charm/summon related fields
     SetCharm(NULL);
     SetPet(NULL);
-    SetCharmerGUID(NULL);
-    SetOwnerGUID(NULL);
-    SetCreatorGUID(NULL);
+    SetCharmerGUID(0);
+    SetOwnerGUID(0);
+    SetCreatorGUID(0);
 
     // reset some aura modifiers before aura apply
-    SetFarSight(NULL);
+    SetFarSightGUID(0);
     SetUInt32Value(PLAYER_TRACK_CREATURES, 0 );
     SetUInt32Value(PLAYER_TRACK_RESOURCES, 0 );
 
@@ -13940,6 +13961,17 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
             case 2:                                         // save state
                 if(extraflags & PLAYER_EXTRA_GM_ON)
                     SetGameMaster(true);
+                break;
+        }
+
+        switch(sWorld.getConfig(CONFIG_GM_VISIBLE_STATE))
+        {
+            default:
+            case 0: SetGMVisible(false); break;             // invisible
+            case 1:                      break;             // visible
+            case 2:                                         // save state
+                if(extraflags & PLAYER_EXTRA_GM_INVISIBLE)
+                    SetGMVisible(false);
                 break;
         }
 
@@ -18470,4 +18502,31 @@ void Player::SetTitle(CharTitlesEntry const* title)
     uint32 fieldIndexOffset = title->bit_index/32;
     uint32 flag = 1 << (title->bit_index%32);
     SetFlag(PLAYER__FIELD_KNOWN_TITLES+fieldIndexOffset, flag);
+}
+
+void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store, bool broadcast)
+{
+    Loot loot;
+    loot.FillLoot (loot_id,store,this,true);
+
+    uint32 max_slot = loot.GetMaxSlotInLootFor(this);
+    for(uint32 i = 0; i < max_slot; ++i)
+    {
+        LootItem* lootItem = loot.LootItemInSlot(i,this);
+
+        ItemPosCountVec dest;
+        uint8 msg = CanStoreNewItem (bag,slot,dest,lootItem->itemid,lootItem->count);
+        if(msg != EQUIP_ERR_OK && slot != NULL_SLOT)
+            msg = CanStoreNewItem( bag, NULL_SLOT,dest,lootItem->itemid,lootItem->count);
+        if( msg != EQUIP_ERR_OK && bag != NULL_BAG)
+            msg = CanStoreNewItem( NULL_BAG, NULL_SLOT,dest,lootItem->itemid,lootItem->count);
+        if(msg != EQUIP_ERR_OK)
+        {
+            SendEquipError( msg, NULL, NULL );
+            continue;
+        }
+
+        Item* pItem = StoreNewItem (dest,lootItem->itemid,true,lootItem->randomPropertyId);
+        SendNewItem(pItem, lootItem->count, false, false, broadcast);
+    }
 }

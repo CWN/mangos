@@ -169,7 +169,7 @@ struct CreatureInfo
     uint32  rangeattacktime;
     uint32  unit_flags;                                     // enum UnitFlags mask values
     uint32  dynamicflags;
-    uint32  family;                                         // enum CreatureFamily values for type==CREATURE_TYPE_BEAST, or 0 in another cases
+    uint32  family;                                         // enum CreatureFamily values (optional)
     uint32  trainer_type;
     uint32  trainer_spell;
     uint32  classNum;
@@ -342,6 +342,7 @@ struct VendorItemData
     {
         for (VendorItemList::iterator itr = m_items.begin(); itr != m_items.end(); ++itr)
             delete (*itr);
+        m_items.clear();
     }
 };
 
@@ -360,10 +361,10 @@ typedef std::list<VendorItemCount> VendorItemCounts;
 struct TrainerSpell
 {
     uint32 spell;
-    uint32 spellcost;
-    uint32 reqskill;
-    uint32 reqskillvalue;
-    uint32 reqlevel;
+    uint32 spellCost;
+    uint32 reqSkill;
+    uint32 reqSkillValue;
+    uint32 reqLevel;
 };
 
 typedef std::vector<TrainerSpell*> TrainerSpellList;
@@ -423,7 +424,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool canFly()  const { return GetCreatureInfo()->InhabitType & INHABIT_AIR; }
         ///// TODO RENAME THIS!!!!!
         bool isCanTrainingOf(Player* player, bool msg) const;
-        bool isCanIneractWithBattleMaster(Player* player, bool msg) const;
+        bool isCanInteractWithBattleMaster(Player* player, bool msg) const;
         bool isCanTrainingAndResetTalentsOf(Player* pPlayer) const;
         bool IsOutOfThreatArea(Unit* pVictim) const;
         bool IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges = false);

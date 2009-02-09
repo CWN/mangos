@@ -688,6 +688,14 @@ void BattleGroundQueue::Update(uint32 bgTypeId, uint32 queue_id, uint8 arenatype
             }
         }
     }
+    // BG case
+    else
+    {
+        if(sBattleGroundMgr.isTesting())
+        {
+            MinPlayersPerTeam = 1;
+        }
+    }
 
     // found out the minimum and maximum ratings the newly added team should battle against
     // arenaRating is the rating of the latest joined team
@@ -715,7 +723,7 @@ void BattleGroundQueue::Update(uint32 bgTypeId, uint32 queue_id, uint8 arenatype
         sLog.outDebug("Battleground: horde pool wasn't created");
 
     // if selection pools are ready, create the new bg
-    if (bAllyOK && bHordeOK)
+    if ((bAllyOK && bHordeOK) || ( sBattleGroundMgr.isTesting() && (bAllyOK || bHordeOK)))
     {
         BattleGround * bg2 = 0;
         // special handling for arenas
@@ -1075,6 +1083,7 @@ BattleGroundMgr::BattleGroundMgr() : m_AutoDistributionTimeChecker(0), m_ArenaTe
 {
     m_BattleGrounds.clear();
     m_NextRatingDiscardUpdate = sWorld.getConfig(CONFIG_ARENA_RATING_DISCARD_TIMER);
+    m_Testing=false;
 }
 
 BattleGroundMgr::~BattleGroundMgr()
@@ -1092,7 +1101,7 @@ BattleGroundMgr::~BattleGroundMgr()
 }
 
 // used to update running battlegrounds, and delete finished ones
-void BattleGroundMgr::Update(time_t diff)
+void BattleGroundMgr::Update(uint32 diff)
 {
     BattleGroundSet::iterator itr, next;
     for(itr = m_BattleGrounds.begin(); itr != m_BattleGrounds.end(); itr = next)
@@ -1319,7 +1328,7 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
                 *data << (uint32)((BattleGroundABScore*)itr->second)->BasesDefended;        // bases defended
                 break;
             case BATTLEGROUND_EY:
-                *data << (uint32)0x00000001;                 // count of next fields
+                *data << (uint32)0x00000001;                // count of next fields
                 *data << (uint32)((BattleGroundEYScore*)itr->second)->FlagCaptures;         // flag captures
                 break;
             case BATTLEGROUND_NA:
@@ -1680,9 +1689,9 @@ void BattleGroundMgr::InitAutomaticArenaPointDistribution()
 void BattleGroundMgr::DistributeArenaPoints()
 {
     // used to distribute arena points based on last week's stats
-    sWorld.SendGlobalText("Flushing Arena points based on team ratings, this may take a few minutes. Please stand by...", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_START);
 
-    sWorld.SendGlobalText("Distributing arena points to players...", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_ONLINE_START);
 
     //temporary structure for storing maximum points to add values for all players
     std::map<uint32, uint32> PlayerPoints;
@@ -1709,9 +1718,9 @@ void BattleGroundMgr::DistributeArenaPoints()
 
     PlayerPoints.clear();
 
-    sWorld.SendGlobalText("Finished setting arena points for online players.", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_ONLINE_END);
 
-    sWorld.SendGlobalText("Modifying played count, arena points etc. for loaded arena teams, sending updated stats to online players...", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_TEAM_START);
     for(ObjectMgr::ArenaTeamMap::iterator titr = objmgr.GetArenaTeamMapBegin(); titr != objmgr.GetArenaTeamMapEnd(); ++titr)
     {
         if(ArenaTeam * at = titr->second)
@@ -1722,9 +1731,9 @@ void BattleGroundMgr::DistributeArenaPoints()
         }
     }
 
-    sWorld.SendGlobalText("Modification done.", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_TEAM_END);
 
-    sWorld.SendGlobalText("Done flushing Arena points.", NULL);
+    sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_END);
 }
 
 void BattleGroundMgr::BuildBattleGroundListPacket(WorldPacket *data, const uint64& guid, Player* plr, uint32 bgTypeId)
@@ -1869,11 +1878,20 @@ uint8 BattleGroundMgr::BGArenaType(uint32 bgQueueTypeId)
     }
 }
 
+void BattleGroundMgr::ToggleTesting()
+{
+    m_Testing = !m_Testing;
+    if(m_Testing)
+        sWorld.SendWorldText(LANG_DEBUG_BG_ON);
+    else
+        sWorld.SendWorldText(LANG_DEBUG_BG_OFF);
+}
+
 void BattleGroundMgr::ToggleArenaTesting()
 {
     m_ArenaTesting = !m_ArenaTesting;
     if(m_ArenaTesting)
-        sWorld.SendGlobalText("Arenas are set to 1v1 for debugging. So, don't join as group.", NULL);
+        sWorld.SendWorldText(LANG_DEBUG_ARENA_ON);
     else
-        sWorld.SendGlobalText("Arenas are set to normal playercount.", NULL);
+        sWorld.SendWorldText(LANG_DEBUG_ARENA_OFF);
 }

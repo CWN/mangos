@@ -203,54 +203,52 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         delete result;
         return true;
     }
-    if(getPetType()==HUNTER_PET || (getPetType()==SUMMON_PET && cinfo->type == CREATURE_TYPE_DEMON && owner->getClass() == CLASS_WARLOCK))
+
+    if(getPetType() == HUNTER_PET || (getPetType() == SUMMON_PET && cinfo->type == CREATURE_TYPE_DEMON && owner->getClass() == CLASS_WARLOCK))
         m_charmInfo->SetPetNumber(pet_number, true);
     else
         m_charmInfo->SetPetNumber(pet_number, false);
+
     SetUInt64Value(UNIT_FIELD_SUMMONEDBY, owner->GetGUID());
     SetDisplayId(fields[3].GetUInt32());
     SetNativeDisplayId(fields[3].GetUInt32());
-    uint32 petlevel=fields[4].GetUInt32();
-    SetUInt32Value(UNIT_NPC_FLAGS , 0);
+    uint32 petlevel = fields[4].GetUInt32();
+    SetUInt32Value(UNIT_NPC_FLAGS, 0);
     SetName(fields[11].GetString());
 
     switch(getPetType())
     {
-
         case SUMMON_PET:
             petlevel=owner->getLevel();
 
-            SetUInt32Value(UNIT_FIELD_BYTES_0,2048);
+            SetUInt32Value(UNIT_FIELD_BYTES_0, 2048);
             SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
                                                             // this enables popup window (pet dismiss, cancel)
             break;
         case HUNTER_PET:
             SetUInt32Value(UNIT_FIELD_BYTES_0, 0x02020100);
             SetByteValue(UNIT_FIELD_BYTES_1, 1, fields[8].GetUInt32());
-            SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
+            SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE);
             SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5 );
-
-            if(fields[12].GetBool())
-                SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_NOT_ALLOWED);
-            else
-                SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_ALLOWED);
+            SetByteValue(UNIT_FIELD_BYTES_2, 2, fields[12].GetBool() ? UNIT_RENAME_NOT_ALLOWED : UNIT_RENAME_ALLOWED);
 
             SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
                                                             // this enables popup window (pet abandon, cancel)
             SetTP(fields[9].GetInt32());
-            SetMaxPower(POWER_HAPPINESS,GetCreatePowers(POWER_HAPPINESS));
+            SetMaxPower(POWER_HAPPINESS, GetCreatePowers(POWER_HAPPINESS));
             SetPower(   POWER_HAPPINESS,fields[15].GetUInt32());
             setPowerType(POWER_FOCUS);
             break;
         default:
-            sLog.outError("Pet have incorrect type (%u) for pet loading.",getPetType());
+            sLog.outError("Pet have incorrect type (%u) for pet loading.", getPetType());
     }
-    InitStatsForLevel( petlevel);
+
+    InitStatsForLevel(petlevel);
     SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, time(NULL));
     SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, fields[5].GetUInt32());
     SetUInt64Value(UNIT_FIELD_CREATEDBY, owner->GetGUID());
 
-    m_charmInfo->SetReactState( ReactStates( fields[6].GetUInt8() ));
+    m_charmInfo->SetReactState(ReactStates(fields[6].GetUInt8()));
     m_loyaltyPoints = fields[7].GetInt32();
 
     uint32 savedhealth = fields[13].GetUInt32();
@@ -909,8 +907,7 @@ void Pet::GivePetLevel(uint32 level)
     if(!level)
         return;
 
-    InitStatsForLevel( level);
-
+    InitStatsForLevel(level);
     SetTP(m_TrainingPoints + (GetLoyaltyLevel() - 1));
 }
 
@@ -962,11 +959,10 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
     SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, uint32((MaNGOS::XP::xp_to_level(creature->getLevel()))/4));
     SetUInt32Value(UNIT_NPC_FLAGS, 0);
 
-    CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(creature->GetCreatureInfo()->family);
-    if( char* familyname = cFamily->Name[sWorld.GetDefaultDbcLocale()] )
-        SetName(familyname);
+    if(CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family))
+        SetName(cFamily->Name[sWorld.GetDefaultDbcLocale()]);
     else
-        SetName(creature->GetName());
+        SetName(creature->GetNameForLocaleIdx(objmgr.GetDBCLocaleIndex()));
 
     m_loyaltyPoints = 1000;
     if(cinfo->type == CREATURE_TYPE_BEAST)
@@ -976,7 +972,7 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
         SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5 );
         SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_ALLOWED);
 
-        SetUInt32Value(UNIT_MOD_CAST_SPEED, creature->GetUInt32Value(UNIT_MOD_CAST_SPEED) );
+        SetUInt32Value(UNIT_MOD_CAST_SPEED, creature->GetUInt32Value(UNIT_MOD_CAST_SPEED));
         SetLoyaltyLevel(REBELLIOUS);
     }
     return true;
@@ -1286,7 +1282,7 @@ void Pet::_LoadSpells()
         {
             Field *fields = result->Fetch();
 
-            addSpell(fields[0].GetUInt16(), fields[2].GetUInt16(), PETSPELL_UNCHANGED, fields[1].GetUInt16());
+            addSpell(fields[0].GetUInt32(), fields[1].GetUInt16(), PETSPELL_UNCHANGED, fields[1].GetUInt16());
         }
         while( result->NextRow() );
 
@@ -1443,7 +1439,7 @@ void Pet::_SaveAuras()
     }
 }
 
-bool Pet::addSpell(uint16 spell_id, uint16 active, PetSpellState state, uint16 slot_id, PetSpellType type)
+bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 slot_id, PetSpellType type)
 {
     SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
     if (!spellInfo)
@@ -1542,7 +1538,7 @@ bool Pet::addSpell(uint16 spell_id, uint16 active, PetSpellState state, uint16 s
     return true;
 }
 
-bool Pet::learnSpell(uint16 spell_id)
+bool Pet::learnSpell(uint32 spell_id)
 {
     // prevent duplicated entires in spell book
     if (!addSpell(spell_id))
@@ -1554,7 +1550,7 @@ bool Pet::learnSpell(uint16 spell_id)
     return true;
 }
 
-void Pet::removeSpell(uint16 spell_id)
+void Pet::removeSpell(uint32 spell_id)
 {
     PetSpellMap::iterator itr = m_spells.find(spell_id);
     if (itr == m_spells.end())
@@ -1574,7 +1570,7 @@ void Pet::removeSpell(uint16 spell_id)
     RemoveAurasDueToSpell(spell_id);
 }
 
-bool Pet::_removeSpell(uint16 spell_id)
+bool Pet::_removeSpell(uint32 spell_id)
 {
     PetSpellMap::iterator itr = m_spells.find(spell_id);
     if (itr != m_spells.end())
@@ -1591,7 +1587,8 @@ void Pet::InitPetCreateSpells()
     m_charmInfo->InitPetActionBar();
 
     m_spells.clear();
-    int32 usedtrainpoints = 0, petspellid;
+    int32 usedtrainpoints = 0;
+    uint32 petspellid;
     PetCreateSpellEntry const* CreateSpells = objmgr.GetPetCreateSpellEntry(GetEntry());
     if(CreateSpells)
     {
@@ -1684,13 +1681,15 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
     if(IsPassiveSpell(spellid))
         return;
 
-    PetSpellMap::const_iterator itr = m_spells.find((uint16)spellid);
+    PetSpellMap::const_iterator itr = m_spells.find(spellid);
 
     int i;
 
     if(apply)
     {
-        for (i = 0; i < m_autospells.size() && m_autospells[i] != spellid; i++);
+        for (i = 0; i < m_autospells.size() && m_autospells[i] != spellid; i++)
+            ;                                               // just search
+
         if (i == m_autospells.size())
         {
             m_autospells.push_back(spellid);
@@ -1701,7 +1700,9 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
     else
     {
         AutoSpellList::iterator itr2 = m_autospells.begin();
-        for (i = 0; i < m_autospells.size() && m_autospells[i] != spellid; i++, itr2++);
+        for (i = 0; i < m_autospells.size() && m_autospells[i] != spellid; i++, itr2++)
+            ;                                               // just search
+
         if (i < m_autospells.size())
         {
             m_autospells.erase(itr2);
@@ -1724,7 +1725,7 @@ bool Pet::Create(uint32 guidlow, Map *map, uint32 Entry, uint32 pet_number)
     if(!InitEntry(Entry))
         return false;
 
-    SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
+    SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE);
     SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5 );
 
     if(getPetType() == MINI_PET)                            // always non-attackable
@@ -1735,7 +1736,8 @@ bool Pet::Create(uint32 guidlow, Map *map, uint32 Entry, uint32 pet_number)
 
 bool Pet::HasSpell(uint32 spell) const
 {
-    return (m_spells.find(spell) != m_spells.end());
+    PetSpellMap::const_iterator itr = m_spells.find(spell);
+    return (itr != m_spells.end() && itr->second->state != PETSPELL_REMOVED );
 }
 
 // Get all passive spells in our skill line
