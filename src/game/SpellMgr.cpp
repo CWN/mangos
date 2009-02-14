@@ -24,6 +24,7 @@
 #include "World.h"
 #include "Chat.h"
 #include "Spell.h"
+#include "BattleGroundMgr.h"
 
 SpellMgr::SpellMgr()
 {
@@ -2051,11 +2052,11 @@ bool SpellMgr::IsSpellValid(SpellEntry const* spellInfo, Player* pl, bool msg)
     return true;
 }
 
-bool IsSpellAllowedInLocation(SpellEntry const *spellInfo,uint32 map_id,uint32 zone_id,uint32 area_id)
+uint8 GetSpellAllowedInLocationError(SpellEntry const *spellInfo,uint32 map_id,uint32 zone_id,uint32 area_id, uint32 bgInstanceId)
 {
     // normal case
-    if( spellInfo->AreaId && spellInfo->AreaId != zone_id && spellInfo->AreaId != area_id )
-        return false;
+    if( spellInfo->AreaId > 0 && spellInfo->AreaId != zone_id && spellInfo->AreaId != area_id )
+        return SPELL_FAILED_REQUIRES_AREA;
 
     // elixirs (all area dependent elixirs have family SPELLFAMILY_POTION, use this for speedup)
     if(spellInfo->SpellFamilyName==SPELLFAMILY_POTION)
@@ -2065,28 +2066,28 @@ bool IsSpellAllowedInLocation(SpellEntry const *spellInfo,uint32 map_id,uint32 z
             if(mask & ELIXIR_BATTLE_MASK)
             {
                 if(spellInfo->Id==45373)                    // Bloodberry Elixir
-                    return zone_id==4075;
+                    return zone_id==4075 ? 0 : SPELL_FAILED_REQUIRES_AREA;
             }
             if(mask & ELIXIR_UNSTABLE_MASK)
             {
                 // in the Blade's Edge Mountains Plateaus and Gruul's Lair.
-                return zone_id ==3522 || map_id==565;
+                return zone_id ==3522 || map_id==565 ? 0 : SPELL_FAILED_REQUIRES_AREA;
             }
             if(mask & ELIXIR_SHATTRATH_MASK)
             {
                 // in Tempest Keep, Serpentshrine Cavern, Caverns of Time: Mount Hyjal, Black Temple, Sunwell Plateau
                 if(zone_id ==3607 || map_id==534 || map_id==564 || zone_id==4075)
-                    return true;
+                    return 0;
 
                 MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
                 if(!mapEntry)
-                    return false;
+                    return SPELL_FAILED_REQUIRES_AREA;
 
-                return mapEntry->multimap_id==206;
+                return mapEntry->multimap_id==206 ? 0 : SPELL_FAILED_REQUIRES_AREA;
             }
 
             // elixirs not have another limitations
-            return true;
+            return 0;
         }
     }
 
@@ -2098,25 +2099,85 @@ bool IsSpellAllowedInLocation(SpellEntry const *spellInfo,uint32 map_id,uint32 z
         {
             MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
             if(!mapEntry)
-                return false;
+                return SPELL_FAILED_REQUIRES_AREA;
 
-            return mapEntry->multimap_id==206;
+            return mapEntry->multimap_id==206 ? 0 : SPELL_FAILED_REQUIRES_AREA;
         }
         case 41617:                                         // Cenarion Mana Salve
         case 41619:                                         // Cenarion Healing Salve
         {
             MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
             if(!mapEntry)
-                return false;
+                return SPELL_FAILED_REQUIRES_AREA;
 
-            return mapEntry->multimap_id==207;
+            return mapEntry->multimap_id==207 ? 0 : SPELL_FAILED_REQUIRES_AREA;
         }
         case 40216:                                         // Dragonmaw Illusion
         case 42016:                                         // Dragonmaw Illusion
-            return area_id == 3759 || area_id == 3966 || area_id == 3939;
+            return area_id == 3759 || area_id == 3966 || area_id == 3939 ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        case 23333:                                         // Warsong Flag
+        case 23335:                                         // Silverwing Flag
+            return map_id == 489 && bgInstanceId ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        case 34976:                                         // Netherstorm Flag
+            return map_id == 566 && bgInstanceId ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        case 2584:                                          // Waiting to Resurrect
+        case 22011:                                         // Spirit Heal Channel
+        case 22012:                                         // Spirit Heal
+        case 24171:                                         // Resurrection Impact Visual
+        case 42792:                                         // Recently Dropped Flag
+        case 43681:                                         // Inactive
+        case 44535:                                         // Spirit Heal (mana)
+        {
+            MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
+            if(!mapEntry)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            return mapEntry->IsBattleGround() && bgInstanceId ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        }
+        case 44521:                                         // Preparation
+        {
+            if(!bgInstanceId)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
+            if(!mapEntry)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            if(!mapEntry->IsBattleGround())
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            BattleGround* bg = sBattleGroundMgr.GetBattleGround(bgInstanceId);
+            return bg && bg->GetStatus()==STATUS_WAIT_JOIN ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        }
+        case 32724:                                         // Gold Team (Alliance)
+        case 32725:                                         // Green Team (Alliance)
+        case 35774:                                         // Gold Team (Horde)
+        case 35775:                                         // Green Team (Horde)
+        {
+            MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
+            if(!mapEntry)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            return mapEntry->IsBattleArena() && bgInstanceId ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        }
+        case 32727:                                         // Arena Preparation
+        {
+            if(!bgInstanceId)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
+            if(!mapEntry)
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            if(!mapEntry->IsBattleArena())
+                return SPELL_FAILED_REQUIRES_AREA;
+
+            BattleGround* bg = sBattleGroundMgr.GetBattleGround(bgInstanceId);
+            return bg && bg->GetStatus()==STATUS_WAIT_JOIN ? 0 : SPELL_FAILED_REQUIRES_AREA;
+        }
     }
 
-    return true;
+    return 0;
 }
 
 void SpellMgr::LoadSkillLineAbilityMap()

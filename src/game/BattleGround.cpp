@@ -19,6 +19,7 @@
 #include "Object.h"
 #include "Player.h"
 #include "BattleGround.h"
+#include "BattleGroundMgr.h"
 #include "Creature.h"
 #include "MapManager.h"
 #include "Language.h"
@@ -26,11 +27,14 @@
 #include "SpellAuras.h"
 #include "ArenaTeam.h"
 #include "World.h"
+#include "Group.h"
+#include "ObjectMgr.h"
+#include "WorldPacket.h"
 #include "Util.h"
 
 BattleGround::BattleGround()
 {
-    m_TypeID            = 0;
+    m_TypeID            = BattleGroundTypeId(0);
     m_InstanceID        = 0;
     m_Status            = 0;
     m_EndTime           = 0;
@@ -767,7 +771,7 @@ void BattleGround::RemovePlayerAtLeave(uint64 guid, bool Transport, bool SendPac
         {
             if(!team) team = plr->GetTeam();
 
-            uint32 bgTypeId = GetTypeID();
+            BattleGroundTypeId bgTypeId = GetTypeID();
             uint32 bgQueueTypeId = BattleGroundMgr::BGQueueTypeId(GetTypeID(), GetArenaType());
             // if arena, remove the specific arena auras
             if(isArena())
@@ -844,9 +848,7 @@ void BattleGround::RemovePlayerAtLeave(uint64 guid, bool Transport, bool SendPac
         plr->SetBGTeam(0);
 
         if(Transport)
-        {
-            plr->TeleportTo(plr->GetBattleGroundEntryPointMap(), plr->GetBattleGroundEntryPointX(), plr->GetBattleGroundEntryPointY(), plr->GetBattleGroundEntryPointZ(), plr->GetBattleGroundEntryPointO());
-        }
+            plr->TeleportTo(plr->GetBattleGroundEntryPoint());
 
         // Log
         sLog.outDetail("BATTLEGROUND: Removed player %s from BattleGround.", plr->GetName());
@@ -1320,6 +1322,9 @@ void BattleGround::SpawnBGCreature(uint32 type, uint32 respawntime)
 */
 bool BattleGround::DelCreature(uint32 type)
 {
+    if(!m_BgCreatures[type])
+        return true;
+
     Creature *cr = HashMapHolder<Creature>::Find(m_BgCreatures[type]);
     if(!cr)
     {
@@ -1334,6 +1339,9 @@ bool BattleGround::DelCreature(uint32 type)
 
 bool BattleGround::DelObject(uint32 type)
 {
+    if(!m_BgObjects[type])
+        return true;
+
     GameObject *obj = HashMapHolder<GameObject>::Find(m_BgObjects[type]);
     if(!obj)
     {
@@ -1504,4 +1512,12 @@ uint32 BattleGround::GetAlivePlayersCountByTeam(uint32 Team) const
         }
     }
     return count;
+}
+
+void BattleGround::SetBgRaid( uint32 TeamID, Group *bg_raid )
+{
+    Group* &old_raid = TeamID == ALLIANCE ? m_BgRaids[BG_TEAM_ALLIANCE] : m_BgRaids[BG_TEAM_HORDE];
+    if(old_raid) old_raid->SetBattlegroundGroup(NULL);
+    if(bg_raid) bg_raid->SetBattlegroundGroup(this);
+    old_raid = bg_raid;
 }

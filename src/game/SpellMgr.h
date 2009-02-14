@@ -323,7 +323,7 @@ bool IsPositiveTarget(uint32 targetA, uint32 targetB);
 bool IsSingleTargetSpell(SpellEntry const *spellInfo);
 bool IsSingleTargetSpells(SpellEntry const *spellInfo1, SpellEntry const *spellInfo2);
 
-bool IsSpellAllowedInLocation(SpellEntry const *spellInfo,uint32 map_id,uint32 zone_id,uint32 area_id);
+uint8 GetSpellAllowedInLocationError(SpellEntry const *spellInfo,uint32 map_id,uint32 zone_id,uint32 area_id,uint32 bgInstanceId);
 
 inline bool IsAreaEffectTarget( Targets target )
 {
@@ -637,7 +637,7 @@ class SpellMgr
         SpellMgr();
         ~SpellMgr();
 
-        // Accessors (const or static functions)
+    // Accessors (const or static functions)
     public:
         // Spell affects
         uint64 GetSpellAffectMask(uint16 spellId, uint8 effectId) const
@@ -828,7 +828,7 @@ class SpellMgr
                 return NULL;
         }
 
-        // Modifiers
+    // Modifiers
     public:
         static SpellMgr& Instance();
 

@@ -29,6 +29,7 @@
 #include "BattleGround.h"
 #include "WaypointMovementGenerator.h"
 #include "InstanceSaveMgr.h"
+#include "ObjectMgr.h"
 
 /*Movement anticheat DEBUG defines */
 //#define MOVEMENT_ANTICHEAT_DEBUG true
