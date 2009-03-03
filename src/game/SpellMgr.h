@@ -207,6 +207,13 @@ enum SpellFailedReason
     SPELL_FAILED_UNKNOWN                        = 0xA8,
 };
 
+// only used in code
+enum SpellCategories
+{
+    SPELLCATEGORY_HEALTH_MANA_POTIONS = 4,
+    SPELLCATEGORY_DEVOUR_MAGIC        = 12
+};
+
 enum SpellFamilyNames
 {
     SPELLFAMILY_GENERIC     = 0,
@@ -274,7 +281,7 @@ int32 GetSpellMaxDuration(SpellEntry const *spellInfo);
 inline bool IsSpellHaveEffect(SpellEntry const *spellInfo, SpellEffects effect)
 {
     for(int i= 0; i < 3; ++i)
-        if(spellInfo->Effect[i]==effect)
+        if(SpellEffects(spellInfo->Effect[i])==effect)
             return true;
     return false;
 }
@@ -300,14 +307,6 @@ bool IsPassiveSpell(uint32 spellId);
 
 inline bool IsDeathPersistentSpell(SpellEntry const *spellInfo)
 {
-    switch(spellInfo->Id)
-    {
-        case 40214:                                     // Dragonmaw Illusion
-        case 35480: case 35481: case 35482:             // Human Illusion
-        case 35483: case 39824:                         // Human Illusion
-            return true;
-    }
-
     return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT;
 }
 

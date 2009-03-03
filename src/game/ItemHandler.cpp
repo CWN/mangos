@@ -347,12 +347,12 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->MaxCount;
         data << pProto->Stackable;
         data << pProto->ContainerSlots;
-        for(int i = 0; i < 10; i++)
+        for(int i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
         {
             data << pProto->ItemStat[i].ItemStatType;
             data << pProto->ItemStat[i].ItemStatValue;
         }
-        for(int i = 0; i < 5; i++)
+        for(int i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
         {
             data << pProto->Damage[i].DamageMin;
             data << pProto->Damage[i].DamageMax;
@@ -372,7 +372,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->AmmoType;
         data << pProto->RangedModRange;
 
-        for(int s = 0; s < 5; s++)
+        for(int s = 0; s < MAX_ITEM_PROTO_SPELLS; ++s)
         {
             // send DBC data for cooldowns in same way as it used in Spell::SendSpellCooldown
             // use `item_template` or if not set then only use spell cooldowns
@@ -426,7 +426,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->Map;                                // Added in 1.12.x & 2.0.1 client branch
         data << pProto->BagFamily;
         data << pProto->TotemCategory;
-        for(int s = 0; s < 3; s++)
+        for(int s = 0; s < MAX_ITEM_PROTO_SOCKETS; ++s)
         {
             data << pProto->Socket[s].Color;
             data << pProto->Socket[s].Content;
@@ -1130,7 +1130,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
         return;
 
     //this slot is excepted when applying / removing meta gem bonus
-    uint8 slot = itemTarget->IsEquipped() ? itemTarget->GetSlot() : NULL_SLOT;
+    uint8 slot = itemTarget->IsEquipped() ? itemTarget->GetSlot() : uint8(NULL_SLOT);
 
     Item *Gems[MAX_GEM_SOCKETS];
     for(int i = 0; i < MAX_GEM_SOCKETS; ++i)

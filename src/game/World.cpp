@@ -407,7 +407,8 @@ void World::LoadConfigSettings(bool reload)
         sLog.outError("          Your configuration file may be out of date!");
         sLog.outError("*****************************************************************************");
         clock_t pause = 3000 + clock();
-        while (pause > clock());
+        while (pause > clock())
+            ;                                               // empty body
     }
     else
     {
@@ -419,7 +420,8 @@ void World::LoadConfigSettings(bool reload)
             sLog.outError("          unexpected behavior.");
             sLog.outError("*****************************************************************************");
             clock_t pause = 3000 + clock();
-            while (pause > clock());
+            while (pause > clock())
+                ;                                           // empty body
         }
     }
 
@@ -610,7 +612,7 @@ void World::LoadConfigSettings(bool reload)
     {
         uint32 val = sConfig.GetIntDefault("SocketSelectTime", DEFAULT_SOCKET_SELECT_TIME);
         if(val!=m_configs[CONFIG_SOCKET_SELECTTIME])
-            sLog.outError("SocketSelectTime option can't be changed at mangosd.conf reload, using current value (%u).",m_configs[DEFAULT_SOCKET_SELECT_TIME]);
+            sLog.outError("SocketSelectTime option can't be changed at mangosd.conf reload, using current value (%u).",m_configs[CONFIG_SOCKET_SELECTTIME]);
     }
     else
         m_configs[CONFIG_SOCKET_SELECTTIME] = sConfig.GetIntDefault("SocketSelectTime", DEFAULT_SOCKET_SELECT_TIME);
@@ -669,7 +671,7 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_configs[CONFIG_SKIP_CINEMATICS] = sConfig.GetIntDefault("SkipCinematics", 0);
-    if(m_configs[CONFIG_SKIP_CINEMATICS] < 0 || m_configs[CONFIG_SKIP_CINEMATICS] > 2)
+    if(int32(m_configs[CONFIG_SKIP_CINEMATICS]) < 0 || m_configs[CONFIG_SKIP_CINEMATICS] > 2)
     {
         sLog.outError("SkipCinematics (%i) must be in range 0..2. Set to 0.",m_configs[CONFIG_SKIP_CINEMATICS]);
         m_configs[CONFIG_SKIP_CINEMATICS] = 0;
@@ -703,7 +705,7 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_configs[CONFIG_START_PLAYER_MONEY] = sConfig.GetIntDefault("StartPlayerMoney", 0);
-    if(m_configs[CONFIG_START_PLAYER_MONEY] < 0)
+    if(int32(m_configs[CONFIG_START_PLAYER_MONEY]) < 0)
     {
         sLog.outError("StartPlayerMoney (%i) must be in range 0..%u. Set to %u.",m_configs[CONFIG_START_PLAYER_MONEY],MAX_MONEY_AMOUNT,0);
         m_configs[CONFIG_START_PLAYER_MONEY] = 0;
@@ -716,14 +718,14 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_configs[CONFIG_MAX_HONOR_POINTS] = sConfig.GetIntDefault("MaxHonorPoints", 75000);
-    if(m_configs[CONFIG_MAX_HONOR_POINTS] < 0)
+    if(int32(m_configs[CONFIG_MAX_HONOR_POINTS]) < 0)
     {
         sLog.outError("MaxHonorPoints (%i) can't be negative. Set to 0.",m_configs[CONFIG_MAX_HONOR_POINTS]);
         m_configs[CONFIG_MAX_HONOR_POINTS] = 0;
     }
 
     m_configs[CONFIG_START_HONOR_POINTS] = sConfig.GetIntDefault("StartHonorPoints", 0);
-    if(m_configs[CONFIG_START_HONOR_POINTS] < 0)
+    if(int32(m_configs[CONFIG_START_HONOR_POINTS]) < 0)
     {
         sLog.outError("StartHonorPoints (%i) must be in range 0..MaxHonorPoints(%u). Set to %u.",
             m_configs[CONFIG_START_HONOR_POINTS],m_configs[CONFIG_MAX_HONOR_POINTS],0);
@@ -737,14 +739,14 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_configs[CONFIG_MAX_ARENA_POINTS] = sConfig.GetIntDefault("MaxArenaPoints", 5000);
-    if(m_configs[CONFIG_MAX_ARENA_POINTS] < 0)
+    if(int32(m_configs[CONFIG_MAX_ARENA_POINTS]) < 0)
     {
         sLog.outError("MaxArenaPoints (%i) can't be negative. Set to 0.",m_configs[CONFIG_MAX_ARENA_POINTS]);
         m_configs[CONFIG_MAX_ARENA_POINTS] = 0;
     }
 
     m_configs[CONFIG_START_ARENA_POINTS] = sConfig.GetIntDefault("StartArenaPoints", 0);
-    if(m_configs[CONFIG_START_ARENA_POINTS] < 0)
+    if(int32(m_configs[CONFIG_START_ARENA_POINTS]) < 0)
     {
         sLog.outError("StartArenaPoints (%i) must be in range 0..MaxArenaPoints(%u). Set to %u.",
             m_configs[CONFIG_START_ARENA_POINTS],m_configs[CONFIG_MAX_ARENA_POINTS],0);
@@ -808,14 +810,14 @@ void World::LoadConfigSettings(bool reload)
     m_configs[CONFIG_MAIL_DELIVERY_DELAY] = sConfig.GetIntDefault("MailDeliveryDelay",HOUR);
 
     m_configs[CONFIG_UPTIME_UPDATE] = sConfig.GetIntDefault("UpdateUptimeInterval", 10);
-    if(m_configs[CONFIG_UPTIME_UPDATE]<=0)
+    if(int32(m_configs[CONFIG_UPTIME_UPDATE])<=0)
     {
         sLog.outError("UpdateUptimeInterval (%i) must be > 0, set to default 10.",m_configs[CONFIG_UPTIME_UPDATE]);
         m_configs[CONFIG_UPTIME_UPDATE] = 10;
     }
     if(reload)
     {
-        m_timers[WUPDATE_UPTIME].SetInterval(m_configs[CONFIG_UPTIME_UPDATE]*MINUTE*1000);
+        m_timers[WUPDATE_UPTIME].SetInterval(m_configs[CONFIG_UPTIME_UPDATE]*MINUTE*IN_MILISECONDS);
         m_timers[WUPDATE_UPTIME].Reset();
     }
 
@@ -1047,8 +1049,8 @@ void World::SetInitialWorldSettings()
     }
 
     ///- Loading strings. Getting no records means core load has to be canceled because no error message can be output.
-    sLog.outString( "" );
-    sLog.outString( "Loading MaNGOS strings..." );
+    sLog.outString();
+    sLog.outString("Loading MaNGOS strings...");
     if (!objmgr.LoadMangosStrings())
         exit(1);                                            // Error message displayed in function already
 
@@ -1335,18 +1337,19 @@ void World::SetInitialWorldSettings()
 
     m_timers[WUPDATE_OBJECTS].SetInterval(0);
     m_timers[WUPDATE_SESSIONS].SetInterval(0);
-    m_timers[WUPDATE_WEATHERS].SetInterval(1000);
-    m_timers[WUPDATE_AUCTIONS].SetInterval(MINUTE*1000);    //set auction update interval to 1 minute
-    m_timers[WUPDATE_UPTIME].SetInterval(m_configs[CONFIG_UPTIME_UPDATE]*MINUTE*1000);
+    m_timers[WUPDATE_WEATHERS].SetInterval(1*IN_MILISECONDS);
+    m_timers[WUPDATE_AUCTIONS].SetInterval(MINUTE*IN_MILISECONDS);
+    m_timers[WUPDATE_UPTIME].SetInterval(m_configs[CONFIG_UPTIME_UPDATE]*MINUTE*IN_MILISECONDS);
                                                             //Update "uptime" table based on configuration entry in minutes.
-    m_timers[WUPDATE_CORPSES].SetInterval(20*MINUTE*1000);  //erase corpses every 20 minutes
+    m_timers[WUPDATE_CORPSES].SetInterval(20*MINUTE*IN_MILISECONDS);
+                                                            //erase corpses every 20 minutes
 
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
     //one second is 1000 -(tested on win system)
-    mail_timer = ((((localtime( &m_gameTime )->tm_hour + 20) % 24)* HOUR * 1000) / m_timers[WUPDATE_AUCTIONS].GetInterval() );
+    mail_timer = ((((localtime( &m_gameTime )->tm_hour + 20) % 24)* HOUR * IN_MILISECONDS) / m_timers[WUPDATE_AUCTIONS].GetInterval() );
                                                             //1440
-    mail_timer_expires = ( (DAY * 1000) / (m_timers[WUPDATE_AUCTIONS].GetInterval()));
+    mail_timer_expires = ( (DAY * IN_MILISECONDS) / (m_timers[WUPDATE_AUCTIONS].GetInterval()));
     sLog.outDebug("Mail timer set to: %u, mail return is called every %u minutes", mail_timer, mail_timer_expires);
 
     ///- Initilize static helper structures
@@ -1764,7 +1767,7 @@ void World::ScriptsProcess()
                     sLog.outError("SCRIPT_COMMAND_MOVE_TO call for non-creature (TypeId: %u), skipping.",source->GetTypeId());
                     break;
                 }
-                ((Unit *)source)->SendMonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, ((Unit *)source)->GetUnitMovementFlags(), step.script->datalong2 );
+                ((Unit *)source)->SendMonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, step.script->datalong2 );
                 ((Unit *)source)->GetMap()->CreatureRelocation(((Creature *)source), step.script->x, step.script->y, step.script->z, 0);
                 break;
             case SCRIPT_COMMAND_FLAG_SET:
