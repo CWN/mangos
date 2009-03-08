@@ -399,6 +399,7 @@ Player::Player (WorldSession *session): Unit()
 
     m_anti_justjumped = 0;       //jump already began
     m_anti_alarmcount = 0;       //alarm counter
+    m_anti_jumpbase = 0;         //AntiGravitaion
     /////////////////////////////////
     m_mailsLoaded = false;
     m_mailsUpdated = false;
@@ -1590,6 +1591,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
 
         SetFallInformation(0, z);
+        m_anti_jumpbase = 0;
 
         //BuildHeartBeatMsg(&data);
         //SendMessageToSet(&data, true);
@@ -1738,6 +1740,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
             m_teleport_dest = WorldLocation(mapid, final_x, final_y, final_z, final_o);
             SetFallInformation(0, final_z);
+            m_anti_jumpbase = 0;
             // if the player is saved before worldportack (at logout for example)
             // this will be used instead of the current location in SaveToDB
 
