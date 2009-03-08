@@ -21,7 +21,6 @@
 #include "Database/DatabaseEnv.h"
 #include "Log.h"
 #include "Opcodes.h"
-#include "ObjectMgr.h"
 #include "SpellMgr.h"
 #include "World.h"
 #include "WorldPacket.h"
@@ -47,7 +46,6 @@
 #include "Group.h"
 #include "Guild.h"
 #include "Pet.h"
-#include "SpellAuras.h"
 #include "Util.h"
 #include "Transports.h"
 #include "Weather.h"
@@ -2047,7 +2045,7 @@ void Player::UninviteFromGroup()
 
     group->RemoveInvite(this);
 
-    if(group->GetMembersCount() <= 1)                   // group has just 1 member => disband
+    if(group->GetMembersCount() <= 1)                       // group has just 1 member => disband
     {
         if(group->IsCreated())
         {
@@ -17920,7 +17918,7 @@ uint32 Player::GetMinLevelForBattleGroundQueueId(uint32 queue_id)
 
 uint32 Player::GetMaxLevelForBattleGroundQueueId(uint32 queue_id)
 {
-    if(queue_id >=6)
+    if(queue_id >=7)
         return 255;                                         // hardcoded max level
 
     return 10*(queue_id+2)-1;
