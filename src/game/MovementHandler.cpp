@@ -358,6 +358,10 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         GetPlayer()->m_anti_lastMStime = CurrentMStime;
     }
 
+    //resync times on client login (first 15 sec for heavy areas)
+    if (GetPlayer()->m_anti_deltaMStime < 15000 && GetPlayer()->m_anti_deltamovetime < 15000)
+        GetPlayer()->m_anti_deltamovetime = GetPlayer()->m_anti_deltaMStime;
+
     int32 sync_time = GetPlayer()->m_anti_deltamovetime - GetPlayer()->m_anti_deltaMStime;
 
     #ifdef MOVEMENT_ANTICHEAT_DEBUG
@@ -417,8 +421,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
        // sLog.outBasic("%s newcoord: tm:%d ftm:%d | %f,%f,%fo(%f) [%X][%s]$%s",GetPlayer()->GetName(),movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,MovementFlags, LookupOpcodeName(opcode),move_type_name[move_type]);
        // sLog.outBasic("%f",tg_z);
         //AntiGravitation (thanks to Meekro)
+        float JumpHeight = GetPlayer()->m_anti_jumpbase - movementInfo.z;
         if ((GetPlayer()->m_anti_jumpbase != 0) && !(MovementFlags & (MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING | MOVEMENTFLAG_FLYING2))
-                    && ((movementInfo.z - GetPlayer()->m_anti_jumpbase) > 2.3)){
+                    && (JumpHeight < GetPlayer()->m_anti_last_vspeed)){
             #ifdef MOVEMENT_ANTICHEAT_DEBUG
             sLog.outError("Movement anticheat: %s is graviJump exception. dz=%f",GetPlayer()->GetName(), movementInfo.z - GetPlayer()->m_anti_jumpbase);
             #endif
@@ -453,7 +458,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         if (movementInfo.time>GetPlayer()->m_anti_lastspeed_changetime)
         {
             GetPlayer()->m_anti_last_hspeed = current_speed; // store current speed
-            GetPlayer()->m_anti_last_vspeed = -3.2f;
+            GetPlayer()->m_anti_last_vspeed = -2.3f;
             if (GetPlayer()->m_anti_lastspeed_changetime != 0) GetPlayer()->m_anti_lastspeed_changetime = 0;
         }
 
