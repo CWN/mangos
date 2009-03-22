@@ -6783,7 +6783,7 @@ void Player::ApplyEquipSpell(SpellEntry const* spellInfo, Item* item, bool apply
     if(apply)
     {
         // Cannot be used in this stance/form
-        if(GetErrorAtShapeshiftedCast(spellInfo, m_form)!=0)
+        if(GetErrorAtShapeshiftedCast(spellInfo, m_form) != SPELL_CAST_OK)
             return;
 
         if(form_change)                                     // check aura active state from other form
@@ -6817,7 +6817,7 @@ void Player::ApplyEquipSpell(SpellEntry const* spellInfo, Item* item, bool apply
         if(form_change)                                     // check aura compatibility
         {
             // Cannot be used in this stance/form
-            if(GetErrorAtShapeshiftedCast(spellInfo, m_form)==0)
+            if(GetErrorAtShapeshiftedCast(spellInfo, m_form)==SPELL_CAST_OK)
                 return;                                     // and remove only not compatible at form change
         }
 
@@ -7143,6 +7143,9 @@ void Player::SendLootRelease( uint64 guid )
 
 void Player::SendLoot(uint64 guid, LootType loot_type)
 {
+    if (uint64 lguid = GetLootGUID())
+        m_session->DoLootRelease(lguid);
+
     Loot    *loot = 0;
     PermissionTypes permission = ALL_PERMISSION;
 
@@ -10226,21 +10229,27 @@ void Player::RemoveItem( uint8 bag, uint8 slot, bool update )
 
                 // remove item dependent auras and casts (only weapon and armor slots)
                 if(slot < EQUIPMENT_SLOT_END)
+                {
                     RemoveItemDependentAurasAndCasts(pItem);
 
-                // remove held enchantments
-                if ( slot == EQUIPMENT_SLOT_MAINHAND )
-                {
-                    if (pItem->GetItemSuffixFactor())
+                    // remove held enchantments, update expertise
+                    if ( slot == EQUIPMENT_SLOT_MAINHAND )
                     {
-                        pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_3);
-                        pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_4);
+                        if (pItem->GetItemSuffixFactor())
+                        {
+                            pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_3);
+                            pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_4);
+                        }
+                        else
+                        {
+                            pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_0);
+                            pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_1);
+                        }
+
+                        UpdateExpertise(BASE_ATTACK);
                     }
-                    else
-                    {
-                        pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_0);
-                        pItem->ClearEnchantment(PROP_ENCHANTMENT_SLOT_1);
-                    }
+                    else if( slot == EQUIPMENT_SLOT_OFFHAND )
+                        UpdateExpertise(OFF_ATTACK);
                 }
             }
 
@@ -10261,11 +10270,6 @@ void Player::RemoveItem( uint8 bag, uint8 slot, bool update )
         pItem->SetSlot( NULL_SLOT );
         if( IsInWorld() && update )
             pItem->SendUpdateToPlayer( this );
-
-        if( slot == EQUIPMENT_SLOT_MAINHAND )
-            UpdateExpertise(BASE_ATTACK);
-        else if( slot == EQUIPMENT_SLOT_OFFHAND )
-            UpdateExpertise(OFF_ATTACK);
     }
 }
 
@@ -10349,6 +10353,12 @@ void Player::DestroyItem( uint8 bag, uint8 slot, bool update )
             {
                 // remove item dependent auras and casts (only weapon and armor slots)
                 RemoveItemDependentAurasAndCasts(pItem);
+
+                // update expertise
+                if ( slot == EQUIPMENT_SLOT_MAINHAND )
+                    UpdateExpertise(BASE_ATTACK);
+                else if( slot == EQUIPMENT_SLOT_OFFHAND )
+                    UpdateExpertise(OFF_ATTACK);
 
                 // equipment visual show
                 SetVisibleItemSlot(slot,NULL);
@@ -14738,6 +14748,14 @@ void Player::_LoadBoundInstances(QueryResult *result)
             // so the value read from the DB may be wrong here but only if the InstanceSave is loaded
             // and in that case it is not used
 
+            MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
+            if(!mapEntry || !mapEntry->IsDungeon())
+            {
+                sLog.outError("_LoadBoundInstances: player %s(%d) has bind to not existed or not dungeon map %d", GetName(), GetGUIDLow(), mapId);
+                CharacterDatabase.PExecute("DELETE FROM character_instance WHERE guid = '%d' AND instance = '%d'", GetGUIDLow(), instanceId);
+                continue;
+            }
+
             if(!perm && group)
             {
                 sLog.outError("_LoadBoundInstances: player %s(%d) is in group %d but has a non-permanent character bind to map %d,%d,%d", GetName(), GetGUIDLow(), GUID_LOPART(group->GetLeaderGUID()), mapId, instanceId, difficulty);
@@ -18149,6 +18167,16 @@ bool Player::HasItemFitToSpellReqirements(SpellEntry const* spellInfo, Item cons
     return false;
 }
 
+bool Player::CanNoReagentCast(SpellEntry const* spellInfo) const
+{
+    // don't take reagents for spells with SPELL_ATTR_EX5_NO_REAGENT_WHILE_PREP
+    if (spellInfo->AttributesEx5 & SPELL_ATTR_EX5_NO_REAGENT_WHILE_PREP &&
+        HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION))
+        return true;
+
+    return false;
+}
+
 void Player::RemoveItemDependentAurasAndCasts( Item * pItem )
 {
     AuraMap& auras = GetAuras();
@@ -18415,7 +18443,7 @@ void Player::UpdateAreaDependentAuras( uint32 newArea )
     for(AuraMap::iterator iter = m_Auras.begin(); iter != m_Auras.end();)
     {
         // use m_zoneUpdateId for speed: UpdateArea called from UpdateZone or instead UpdateZone in both cases m_zoneUpdateId up-to-date
-        if(GetSpellAllowedInLocationError(iter->second->GetSpellProto(),GetMapId(),m_zoneUpdateId,newArea,GetBattleGroundId())!=0)
+        if(GetSpellAllowedInLocationError(iter->second->GetSpellProto(),GetMapId(),m_zoneUpdateId,newArea,GetBattleGroundId()) != SPELL_CAST_OK)
             RemoveAura(iter);
         else
             ++iter;
