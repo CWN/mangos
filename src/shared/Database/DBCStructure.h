@@ -343,6 +343,13 @@ struct ItemEntry
    uint32 Sheath;
 };
 
+struct ItemBagFamilyEntry
+{
+    uint32   ID;                                            // 0
+    //char*     name[16]                                    // 1-16     m_name_lang
+    //                                                      // 17       name flags
+};
+
 struct ItemDisplayInfoEntry
 {
     uint32      ID;
@@ -400,16 +407,15 @@ struct ItemSetEntry
     uint32    required_skill_value;                         // 52
 };
 
+#define MAX_LOCK_CASE 8
+
 struct LockEntry
 {
-    uint32      ID;                                         // 0
-    uint32      keytype[5];                                 // 1-5
-                                                            // 6-8, not used
-    uint32      key[5];                                     // 9-13
-                                                            // 14-16, not used
-    uint32      requiredminingskill;                        // 17
-    uint32      requiredlockskill;                          // 18
-                                                            // 19-32, not used
+    uint32      ID;                                         // 0        m_ID
+    uint32      Type[MAX_LOCK_CASE];                        // 1-5      m_Type
+    uint32      Index[MAX_LOCK_CASE];                       // 9-16     m_Index
+    uint32      Skill[MAX_LOCK_CASE];                       // 17-24    m_Skill
+    //uint32      Action[MAX_LOCK_CASE];                    // 25-32    m_Action
 };
 
 struct MailTemplateEntry
