@@ -208,6 +208,10 @@ extern DBCStorage <TaxiPathEntry>                sTaxiPathStore;
 extern TaxiMask                                  sTaxiNodesMask;
 extern TaxiPathSetBySource                       sTaxiPathSetBySource;
 extern TaxiPathNodesByPath                       sTaxiPathNodesByPath;
+//movement anticheat
+extern DBCStorage <TransportAnimationEntry>      sTransportAnimation;
+extern TransportAnimationSize                    sTransportAnimationSize;
+//<<< movement anticheat
 extern DBCStorage <TotemCategoryEntry>           sTotemCategoryStore;
 extern DBCStorage <VehicleEntry>                 sVehicleStore;
 extern DBCStorage <VehicleSeatEntry>             sVehicleSeatStore;

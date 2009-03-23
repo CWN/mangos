@@ -1488,7 +1488,18 @@ struct TaxiPathNodeEntry
                                                             // 9        m_arrivalEventID
                                                             // 10       m_departureEventID
 };
-
+//movement anticheat
+struct TransportAnimationEntry
+{
+    uint32    ID;                                           // 0        m_ID
+    uint32    trans_ID;                                     // 1        m_transport_ID
+    uint32    time;                                         // 2        m_time
+    float     x;                                            // 3        m_X
+    float     y;                                            // 4        m_Y
+    float     z;                                            // 5        m_Z
+    uint32    animation;                                    // 7        m_anim
+};
+//<<< movement anticheat
 struct TotemCategoryEntry
 {
     uint32    ID;                                           // 0
@@ -1656,6 +1667,17 @@ struct TaxiPathNode
 };
 typedef std::vector<TaxiPathNode> TaxiPathNodeList;
 typedef std::vector<TaxiPathNodeList> TaxiPathNodesByPath;
+
+//movement anticheat
+struct TransportAnimationNode
+{
+    float     min_x, max_x;
+    float     min_y, max_y;
+    float     min_z, max_z;
+};
+typedef std::map<uint32,TransportAnimationNode> TransportAnimationSize;
+//typedef std::vector<TransportAnimationNode> ;
+//<< movement anticheat
 
 #define TaxiMaskSize 12
 typedef uint32 TaxiMask[TaxiMaskSize];

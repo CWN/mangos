@@ -31,9 +31,10 @@
 #include "InstanceSaveMgr.h"
 #include "ObjectMgr.h"
 #include "World.h"
+#include "Database/DBCStores.h"
 
 /*Movement anticheat DEBUG defines */
-//#define MOVEMENT_ANTICHEAT_DEBUG true
+#define MOVEMENT_ANTICHEAT_DEBUG true
 /*end Movement anticheate defines*/
 void WorldSession::HandleMoveWorldportAckOpcode( WorldPacket & /*recv_data*/ )
 {
@@ -514,13 +515,56 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                     float delta_goy = go_data->posY - movementInfo.y;
                     float delta_goz = go_data->posZ - movementInfo.z;
                     int mapid = go_data->mapid;
+
                     #ifdef MOVEMENT_ANTICHEAT_DEBUG
-                    sLog.outDebug("MA-%s, transport movement. GO xyzo: %f,%f,%f",
-                                    GetPlayer()->GetName(), go_data->posX,go_data->posY,go_data->posZ);
+                    sLog.outBasic("MA-%s, transport movement. GO id %d | xyzo: %f,%f,%f",
+                                    GetPlayer()->GetName(), go_data->id, go_data->posX,go_data->posY,go_data->posZ);
                     #endif
                     if (GetPlayer()->GetMapId() != mapid){
                         check_passed = false;
-                    } else if (mapid !=369) {
+                    } else {
+                        if (sTransportAnimationSize.find(go_data->id) != sTransportAnimationSize.end()){
+                           #ifdef MOVEMENT_ANTICHEAT_DEBUG
+                           sLog.outBasic("MA-%s, transport size: x %f - %f, y %f - %f, z %f - %f",
+                                       GetPlayer()->GetName(),
+                                       sTransportAnimationSize[go_data->id].max_x,
+                                       sTransportAnimationSize[go_data->id].min_x,
+                                       sTransportAnimationSize[go_data->id].max_y,
+                                       sTransportAnimationSize[go_data->id].min_y,
+                                       sTransportAnimationSize[go_data->id].max_z,
+                                       sTransportAnimationSize[go_data->id].min_z);
+                           #endif
+
+                           //if (!(delta_gox > sTransportAnimationSize[go_data->id].min_x && delta_gox < sTransportAnimationSize[go_data->id].max_x
+                           //    && delta_goy > sTransportAnimationSize[go_data->id].min_y && delta_goy < sTransportAnimationSize[go_data->id].max_y
+                           //    && delta_goz > sTransportAnimationSize[go_data->id].min_z && delta_goz < sTransportAnimationSize[go_data->id].max_z
+                           //    ))
+                           if ( !(movementInfo.x > (sTransportAnimationSize[go_data->id].min_x + go_data->posX)
+                               && movementInfo.x < (sTransportAnimationSize[go_data->id].max_x + go_data->posX)
+                               && movementInfo.y > (sTransportAnimationSize[go_data->id].min_y + go_data->posY)
+                               && movementInfo.y < (sTransportAnimationSize[go_data->id].max_y + go_data->posY)
+                               && movementInfo.z > (sTransportAnimationSize[go_data->id].min_z + go_data->posZ)
+                               && movementInfo.z < (sTransportAnimationSize[go_data->id].max_z + go_data->posZ)
+                               ))
+                           {
+                                check_passed = false;
+                                 #ifdef MOVEMENT_ANTICHEAT_DEBUG
+                                 sLog.outError("MA-%s, leave transport. GO xyzo: %f,%f,%f",
+                                                GetPlayer()->GetName(), delta_gox,delta_goy,delta_goz);
+                                 #endif
+                           }
+                        } else {
+                            float delta_go = delta_gox*delta_gox + delta_goy*delta_goy;
+                             if (delta_go > 3600.0f) {
+                                 check_passed = false;
+                                 #ifdef MOVEMENT_ANTICHEAT_DEBUG
+                                 sLog.outError("MA-%s, leave transport. GO xyzo: %f,%f,%f",
+                                                GetPlayer()->GetName(), go_data->posX,go_data->posY,go_data->posZ);
+                                 #endif
+                             }
+                        }
+
+                        /*if (mapid !=369) {
                         float delta_go = delta_gox*delta_gox + delta_goy*delta_goy;
                         if (delta_go > 3600.0f) {
                             check_passed = false;
@@ -528,7 +572,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                             sLog.outError("MA-%s, leave transport. GO xyzo: %f,%f,%f",
                                             GetPlayer()->GetName(), go_data->posX,go_data->posY,go_data->posZ);
                             #endif
-                        }
+                        }*/
                     }
 
                 } else {

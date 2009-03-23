@@ -139,6 +139,10 @@ DBCStorage <TaxiPathEntry> sTaxiPathStore(TaxiPathEntryfmt);
 TaxiPathNodesByPath sTaxiPathNodesByPath;
 
 static DBCStorage <TaxiPathNodeEntry> sTaxiPathNodeStore(TaxiPathNodeEntryfmt);
+//movement anticheat
+DBCStorage <TransportAnimationEntry> sTransportAnimation(TransportAnimationfmt);
+TransportAnimationSize sTransportAnimationSize;
+//<<< movement anticheat
 DBCStorage <TotemCategoryEntry> sTotemCategoryStore(TotemCategoryEntryfmt);
 DBCStorage <VehicleEntry> sVehicleStore(VehicleEntryfmt);
 DBCStorage <VehicleSeatEntry> sVehicleSeatStore(VehicleSeatEntryfmt);
@@ -484,6 +488,39 @@ void LoadDBCStores(const std::string& dataPath)
             sTaxiNodesMask[field] |= submask;
         }
     }
+    //movement anticheat
+    LoadDBC(availableDbcLocales,bar,bad_dbc_files,sTransportAnimation,       dbcPath,"TransportAnimation.dbc");
+    for(uint32 i = 1; i < sTransportAnimation.GetNumRows(); ++i)
+        if(TransportAnimationEntry const* entry = sTransportAnimation.LookupEntry(i))
+        {
+            if (sTransportAnimationSize[entry->trans_ID].max_x < entry->x)
+                sTransportAnimationSize[entry->trans_ID].max_x = entry->x;
+            if (sTransportAnimationSize[entry->trans_ID].min_x > entry->x)
+                sTransportAnimationSize[entry->trans_ID].min_x = entry->x;
+
+            if (sTransportAnimationSize[entry->trans_ID].max_y < entry->y)
+                sTransportAnimationSize[entry->trans_ID].max_y = entry->y;
+            if (sTransportAnimationSize[entry->trans_ID].min_y > entry->y)
+                sTransportAnimationSize[entry->trans_ID].min_y = entry->y;
+
+            if (sTransportAnimationSize[entry->trans_ID].max_z < entry->z)
+                sTransportAnimationSize[entry->trans_ID].max_z = entry->z;
+            if (sTransportAnimationSize[entry->trans_ID].min_z > entry->z)
+                sTransportAnimationSize[entry->trans_ID].min_z = entry->z;
+        }
+
+    for (TransportAnimationSize::iterator iter = sTransportAnimationSize.begin() ; iter != sTransportAnimationSize.end(); iter++ ){
+         //sLog.outString("transport object: %d",(*iter).first);
+         sTransportAnimationSize[(*iter).first].min_x -= 60;
+         sTransportAnimationSize[(*iter).first].min_y -= 60;
+         sTransportAnimationSize[(*iter).first].min_z -= 60;
+         sTransportAnimationSize[(*iter).first].max_x += 60;
+         sTransportAnimationSize[(*iter).first].max_y += 60;
+         sTransportAnimationSize[(*iter).first].max_z += 60;
+    }
+    
+
+    //movement anticheat
 
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sTotemCategoryStore,       dbcPath,"TotemCategory.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sVehicleStore,             dbcPath,"Vehicle.dbc");

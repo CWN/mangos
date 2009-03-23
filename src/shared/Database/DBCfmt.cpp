@@ -92,6 +92,9 @@ const char TaxiNodesEntryfmt[]="nifffxxxxxxxxxxxxxxxxxii";
 const char TaxiPathEntryfmt[]="niii";
 const char TaxiPathNodeEntryfmt[]="diiifffiixx";
 const char TotemCategoryEntryfmt[]="nxxxxxxxxxxxxxxxxxii";
+//movement anticheat
+const char TransportAnimationfmt[]="niifffi";
+//<<< movement anticheat
 const char VehicleEntryfmt[]="niffffiiiiiiiiffffiiiiiifffffffffffssssfifi";
 const char VehicleSeatEntryfmt[]="niiffffffffffiiiiiifffffffiiifffiiiiiiiffiiiii";
 const char WorldMapAreaEntryfmt[]="xinxffffix";
