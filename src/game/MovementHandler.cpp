@@ -511,14 +511,16 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             } else {
                 if (GameObjectData const* go_data = objmgr.GetGOData(GetPlayer()->m_anti_TransportGUID))
                 {
-                    float delta_gox = go_data->posX - movementInfo.x;
-                    float delta_goy = go_data->posY - movementInfo.y;
-                    float delta_goz = go_data->posZ - movementInfo.z;
+                    float delta_gox = movementInfo.x - go_data->posX;
+                    float delta_goy = movementInfo.y - go_data->posY;
+                    float delta_goz = movementInfo.z - go_data->posZ;
                     int mapid = go_data->mapid;
 
                     #ifdef MOVEMENT_ANTICHEAT_DEBUG
                     sLog.outBasic("MA-%s, transport movement. GO id %d | xyzo: %f,%f,%f",
                                     GetPlayer()->GetName(), go_data->id, go_data->posX,go_data->posY,go_data->posZ);
+                    sLog.outError("MA-%s, transport movement. GO id %d | xyzo: %f,%f,%f",
+                                    GetPlayer()->GetName(), go_data->id, delta_gox,delta_goy,delta_goz);
                     #endif
                     if (GetPlayer()->GetMapId() != mapid){
                         check_passed = false;
@@ -535,16 +537,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                                        sTransportAnimationSize[go_data->id].min_z);
                            #endif
 
-                           //if (!(delta_gox > sTransportAnimationSize[go_data->id].min_x && delta_gox < sTransportAnimationSize[go_data->id].max_x
-                           //    && delta_goy > sTransportAnimationSize[go_data->id].min_y && delta_goy < sTransportAnimationSize[go_data->id].max_y
-                           //    && delta_goz > sTransportAnimationSize[go_data->id].min_z && delta_goz < sTransportAnimationSize[go_data->id].max_z
-                           //    ))
-                           if ( !(movementInfo.x > (sTransportAnimationSize[go_data->id].min_x + go_data->posX)
-                               && movementInfo.x < (sTransportAnimationSize[go_data->id].max_x + go_data->posX)
-                               && movementInfo.y > (sTransportAnimationSize[go_data->id].min_y + go_data->posY)
-                               && movementInfo.y < (sTransportAnimationSize[go_data->id].max_y + go_data->posY)
-                               && movementInfo.z > (sTransportAnimationSize[go_data->id].min_z + go_data->posZ)
-                               && movementInfo.z < (sTransportAnimationSize[go_data->id].max_z + go_data->posZ)
+                           if (!(delta_gox > sTransportAnimationSize[go_data->id].min_x && delta_gox < sTransportAnimationSize[go_data->id].max_x
+                               && delta_goy > sTransportAnimationSize[go_data->id].min_y && delta_goy < sTransportAnimationSize[go_data->id].max_y
+                               && delta_goz > sTransportAnimationSize[go_data->id].min_z && delta_goz < sTransportAnimationSize[go_data->id].max_z
                                ))
                            {
                                 check_passed = false;
