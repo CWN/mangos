@@ -289,7 +289,7 @@ void Spell::EffectEnvirinmentalDMG(uint32 i)
 
     m_caster->SendSpellNonMeleeDamageLog(m_caster, m_spellInfo->Id, damage, GetSpellSchoolMask(m_spellInfo), absorb, resist, false, 0, false);
     if(m_caster->GetTypeId() == TYPEID_PLAYER)
-        ((Player*)m_caster)->EnvironmentalDamage(m_caster->GetGUID(),DAMAGE_FIRE,damage);
+        ((Player*)m_caster)->EnvironmentalDamage(DAMAGE_FIRE,damage);
 }
 
 void Spell::EffectSchoolDMG(uint32 effect_idx)
@@ -5492,7 +5492,7 @@ void Spell::EffectReputation(uint32 i)
     if(!factionEntry)
         return;
 
-    _player->ModifyFactionReputation(factionEntry,rep_change);
+    _player->GetReputationMgr().ModifyReputation(factionEntry,rep_change);
 }
 
 void Spell::EffectQuestComplete(uint32 i)
