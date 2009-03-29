@@ -44,6 +44,7 @@
 #include "CellImpl.h"
 #include "Path.h"
 #include "Traveller.h"
+#include "DBCStores.h"
 
 #include <math.h>
 
@@ -7183,6 +7184,16 @@ Unit* Unit::GetCharm() const
     }
 
     return NULL;
+}
+
+float Unit::GetCombatDistance( const Unit* target ) const
+{
+    float radius = target->GetFloatValue(UNIT_FIELD_COMBATREACH) + GetFloatValue(UNIT_FIELD_COMBATREACH);
+    float dx = GetPositionX() - target->GetPositionX();
+    float dy = GetPositionY() - target->GetPositionY();
+    float dz = GetPositionZ() - target->GetPositionZ();
+    float dist = sqrt((dx*dx) + (dy*dy) + (dz*dz)) - radius;
+    return ( dist > 0 ? dist : 0);
 }
 
 void Unit::SetPet(Pet* pet)
