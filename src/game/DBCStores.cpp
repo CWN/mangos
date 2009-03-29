@@ -512,10 +512,10 @@ void LoadDBCStores(const std::string& dataPath)
          //sLog.outString("transport object: %d",(*iter).first);
          sTransportAnimationSize[(*iter).first].min_x -= 60;
          sTransportAnimationSize[(*iter).first].min_y -= 60;
-         sTransportAnimationSize[(*iter).first].min_z -= 60;
+         sTransportAnimationSize[(*iter).first].min_z -= 160;
          sTransportAnimationSize[(*iter).first].max_x += 60;
          sTransportAnimationSize[(*iter).first].max_y += 60;
-         sTransportAnimationSize[(*iter).first].max_z += 60;
+         sTransportAnimationSize[(*iter).first].max_z += 160;
     }
     
 

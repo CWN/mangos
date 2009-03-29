@@ -31,7 +31,7 @@
 #include "InstanceSaveMgr.h"
 #include "ObjectMgr.h"
 #include "World.h"
-#include "Database/DBCStores.h"
+#include "DBCStores.h"
 
 /*Movement anticheat DEBUG defines */
 #define MOVEMENT_ANTICHEAT_DEBUG true
@@ -533,6 +533,47 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                         check_passed = false;
                     } else {
                         if (sTransportAnimationSize.find(go_data->id) != sTransportAnimationSize.end()){
+
+                           //float min_x = go_data->posX + sTransportAnimationSize[go_data->id].min_x;
+                           //float max_x = go_data->posX + sTransportAnimationSize[go_data->id].max_x;
+                           //float min_y = go_data->posY + sTransportAnimationSize[go_data->id].min_y;
+                           //float max_y = go_data->posY + sTransportAnimationSize[go_data->id].max_y;
+                           //float min_z = go_data->posZ + sTransportAnimationSize[go_data->id].min_z;
+                           //float max_z = go_data->posZ + sTransportAnimationSize[go_data->id].max_z;
+
+                           float min_x = sTransportAnimationSize[go_data->id].min_x;
+                           float max_x = sTransportAnimationSize[go_data->id].max_x;
+                           float min_y = sTransportAnimationSize[go_data->id].min_y;
+                           float max_y = sTransportAnimationSize[go_data->id].max_y;
+                           float min_z = sTransportAnimationSize[go_data->id].min_z;
+                           float max_z = sTransportAnimationSize[go_data->id].max_z;
+
+                           float min_x2 = min_x * go_data->rotation3 - min_y * go_data->rotation2;
+                           float max_x2 = max_x * go_data->rotation3 - max_y * go_data->rotation2;
+                           float min_y2 = min_x * go_data->rotation2 + min_y * go_data->rotation3;
+                           float max_y2 = max_x * go_data->rotation2 + max_y * go_data->rotation3;
+       sLog.outError("MA-%s, transport path size: x %f - %f, y %f - %f",
+                   GetPlayer()->GetName(),
+                   max_x2,
+                   min_x2,
+                   max_y2,
+                   min_y2);
+                           if (max_x2 < min_x2){
+                               max_x = min_x2;
+                               min_x = max_x2;
+                           } else {
+                               max_x = max_x2;
+                               min_x = min_x2;
+                           }
+
+                           if (max_y2 < min_y2){
+                               max_y = min_y2;
+                               min_y = max_y2;
+                           } else {
+                               max_y = max_y2;
+                               min_y = min_y2;
+                           }
+
                            #ifdef MOVEMENT_ANTICHEAT_DEBUG
                            sLog.outBasic("MA-%s, transport size: x %f - %f, y %f - %f, z %f - %f",
                                        GetPlayer()->GetName(),
@@ -542,11 +583,23 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                                        sTransportAnimationSize[go_data->id].min_y,
                                        sTransportAnimationSize[go_data->id].max_z,
                                        sTransportAnimationSize[go_data->id].min_z);
+                           sLog.outError("MA-%s, transport path size: x %f - %f, y %f - %f, z %f - %f",
+                                       GetPlayer()->GetName(),
+                                       max_x,
+                                       min_x,
+                                       max_y,
+                                       min_y,
+                                       max_z,
+                                       min_z);
                            #endif
 
-                           if (!(delta_gox > sTransportAnimationSize[go_data->id].min_x && delta_gox < sTransportAnimationSize[go_data->id].max_x
-                               && delta_goy > sTransportAnimationSize[go_data->id].min_y && delta_goy < sTransportAnimationSize[go_data->id].max_y
-                               && delta_goz > sTransportAnimationSize[go_data->id].min_z && delta_goz < sTransportAnimationSize[go_data->id].max_z
+                           //if ( !(movementInfo.x > min_x && movementInfo.x < max_x
+                           //    && movementInfo.y > min_y && movementInfo.y < max_y
+                           //    && movementInfo.z > min_z && movementInfo.z < max_z
+                           //    ))
+                           if (!(delta_gox > min_x && delta_gox < max_x
+                               && delta_goy > min_y && delta_goy < max_y
+                               && delta_goz > min_z && delta_goz < max_z
                                ))
                            {
                                 check_passed = false;
