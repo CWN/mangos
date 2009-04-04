@@ -158,7 +158,7 @@ struct ChrRacesEntry
                                                             // 6-7 unused
     uint32      TeamID;                                     // 8 (7-Alliance 1-Horde)
                                                             // 9-12 unused
-    uint32      startmovie;                                 // 13 id from CinematicCamera.dbc
+    uint32      CinematicSequence;                          // 13 id from CinematicCamera.dbc
     char*       name[16];                                   // 14-29 used for DBC language detection/selection
                                                             // 30 string flags, unused
     //char*       nameFemale[16];                           // 31-46, if different from base (male) case
@@ -667,6 +667,9 @@ struct SpellEntry
     uint32    TotemCategory[2];                             // 212-213
     uint32    AreaId;                                       // 214
     uint32    SchoolMask;                                   // 215 school mask
+
+    // helpers
+    int32 CalculateSimpleValue(uint8 eff) const { return EffectBasePoints[eff]+int32(EffectBaseDice[eff]); }
 
     private:
         // prevent creating custom entries (copy data from original in fact)
