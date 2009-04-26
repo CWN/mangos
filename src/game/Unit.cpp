@@ -147,7 +147,7 @@ Unit::Unit()
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
                                                             // 2.3.2 - 0x70
-    m_updateFlag = (UPDATEFLAG_HIGHGUID | UPDATEFLAG_LIVING | UPDATEFLAG_HASPOSITION);
+    m_updateFlag = (UPDATEFLAG_HIGHGUID | UPDATEFLAG_LIVING | UPDATEFLAG_HAS_POSITION);
 
     m_attackTimer[BASE_ATTACK]   = 0;
     m_attackTimer[OFF_ATTACK]    = 0;
@@ -504,28 +504,22 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     if(!spellProto || spellProto->Mechanic != MECHANIC_ROOT)
         pVictim->RemoveSpellbyDamageTaken(SPELL_AURA_MOD_ROOT, damage);
 
-    if(pVictim->GetTypeId() != TYPEID_PLAYER)
+    // no xp,health if type 8 /critters/
+    if(pVictim->GetTypeId() != TYPEID_PLAYER && pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
     {
-        // no xp,health if type 8 /critters/
-        if ( pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
-        {
-            pVictim->setDeathState(JUST_DIED);
-            pVictim->SetHealth(0);
+        pVictim->setDeathState(JUST_DIED);
+        pVictim->SetHealth(0);
 
-            // allow loot only if has loot_id in creature_template
-            CreatureInfo const* cInfo = ((Creature*)pVictim)->GetCreatureInfo();
-            if(cInfo && cInfo->lootid)
-                pVictim->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+        // allow loot only if has loot_id in creature_template
+        CreatureInfo const* cInfo = ((Creature*)pVictim)->GetCreatureInfo();
+        if(cInfo && cInfo->lootid)
+            pVictim->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
 
-            // some critters required for quests
-            if(GetTypeId() == TYPEID_PLAYER)
-                ((Player*)this)->KilledMonster(pVictim->GetEntry(),pVictim->GetGUID());
+        // some critters required for quests
+        if(GetTypeId() == TYPEID_PLAYER)
+            ((Player*)this)->KilledMonster(pVictim->GetEntry(),pVictim->GetGUID());
 
-            return damage;
-        }
-
-        if(!pVictim->isInCombat() && ((Creature*)pVictim)->AI())
-            ((Creature*)pVictim)->AI()->AttackStart(this);
+        return damage;
     }
 
     DEBUG_LOG("DealDamageStart");
@@ -774,18 +768,16 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 
         if(damagetype != DOT)
         {
-            if(getVictim())
-            {
-                // if have target and damage pVictim just call AI reaction
-                if(pVictim != getVictim() && pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
-                    ((Creature*)pVictim)->AI()->AttackedBy(this);
-            }
-            else
+            if(!getVictim())
             {
                 // if not have main target then attack state with target (including AI call)
                 //start melee attacks only after melee hit
                 Attack(pVictim,(damagetype == DIRECT_DAMAGE));
             }
+
+            // if damage pVictim call AI reaction
+            if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
+                ((Creature*)pVictim)->AI()->AttackedBy(this);
         }
 
         // polymorphed and other negative transformed cases
@@ -2186,7 +2178,6 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
                     --m_extraAttacks;
             }
         }
-
         return;
     }
 
@@ -2249,6 +2240,10 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
     else
         DEBUG_LOG("AttackerStateUpdate: (NPC)    %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
             GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damage, absorbed_dmg, blocked_dmg, resisted_dmg);
+
+    // if damage pVictim call AI reaction
+    if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
+        ((Creature*)pVictim)->AI()->AttackedBy(this);
 
     // extra attack only at any non extra attack (normal case)
     if(!extra && extraAttacks)
@@ -3195,7 +3190,7 @@ void Unit::_UpdateSpells( uint32 time )
 
     if(!m_gameObj.empty())
     {
-        std::list<GameObject*>::iterator ite1, dnext1;
+        GameObjectList::iterator ite1, dnext1;
         for (ite1 = m_gameObj.begin(); ite1 != m_gameObj.end(); ite1 = dnext1)
         {
             dnext1 = ite1;
@@ -3322,7 +3317,7 @@ void Unit::InterruptSpell(uint32 spellType, bool withDelayed)
 {
     assert(spellType < CURRENT_MAX_SPELL);
 
-    if(m_currentSpells[spellType] && (withDelayed || m_currentSpells[spellType]->getState() != SPELL_STATE_DELAYED) )
+    if (m_currentSpells[spellType] && (withDelayed || m_currentSpells[spellType]->getState() != SPELL_STATE_DELAYED) )
     {
         // send autorepeat cancel message for autorepeat spells
         if (spellType == CURRENT_AUTOREPEAT_SPELL)
@@ -3333,8 +3328,13 @@ void Unit::InterruptSpell(uint32 spellType, bool withDelayed)
 
         if (m_currentSpells[spellType]->getState() != SPELL_STATE_FINISHED)
             m_currentSpells[spellType]->cancel();
-        m_currentSpells[spellType]->SetReferencedFromCurrent(false);
-        m_currentSpells[spellType] = NULL;
+
+        // cancel can interrupt spell already (caster cancel ->target aura remove -> caster iterrupt)
+        if (m_currentSpells[spellType])
+        {
+            m_currentSpells[spellType]->SetReferencedFromCurrent(false);
+            m_currentSpells[spellType] = NULL;
+        }
     }
 }
 
@@ -3365,36 +3365,15 @@ void Unit::InterruptNonMeleeSpells(bool withDelayed, uint32 spell_id)
 {
     // generic spells are interrupted if they are not finished or delayed
     if (m_currentSpells[CURRENT_GENERIC_SPELL] && (!spell_id || m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->Id==spell_id))
-    {
-        if  ( (m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_FINISHED) &&
-            (withDelayed || m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_DELAYED) )
-            m_currentSpells[CURRENT_GENERIC_SPELL]->cancel();
-        m_currentSpells[CURRENT_GENERIC_SPELL]->SetReferencedFromCurrent(false);
-        m_currentSpells[CURRENT_GENERIC_SPELL] = NULL;
-    }
+        InterruptSpell(CURRENT_GENERIC_SPELL,withDelayed);
 
     // autorepeat spells are interrupted if they are not finished or delayed
     if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && (!spell_id || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id==spell_id))
-    {
-        // send disable autorepeat packet in any case
-        if(GetTypeId()==TYPEID_PLAYER)
-            ((Player*)this)->SendAutoRepeatCancel();
-
-        if ( (m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->getState() != SPELL_STATE_FINISHED) &&
-            (withDelayed || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->getState() != SPELL_STATE_DELAYED) )
-            m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->cancel();
-        m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->SetReferencedFromCurrent(false);
-        m_currentSpells[CURRENT_AUTOREPEAT_SPELL] = NULL;
-    }
+        InterruptSpell(CURRENT_AUTOREPEAT_SPELL,withDelayed);
 
     // channeled spells are interrupted if they are not finished, even if they are delayed
     if (m_currentSpells[CURRENT_CHANNELED_SPELL] && (!spell_id || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id==spell_id))
-    {
-        if (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED)
-            m_currentSpells[CURRENT_CHANNELED_SPELL]->cancel();
-        m_currentSpells[CURRENT_CHANNELED_SPELL]->SetReferencedFromCurrent(false);
-        m_currentSpells[CURRENT_CHANNELED_SPELL] = NULL;
-    }
+        InterruptSpell(CURRENT_CHANNELED_SPELL,true);
 }
 
 Spell* Unit::FindCurrentSpellBySpellId(uint32 spell_id) const
@@ -4265,7 +4244,7 @@ void Unit::RemoveDynObject(uint32 spellid)
         return;
     for (DynObjectGUIDs::iterator i = m_dynObjGUIDs.begin(); i != m_dynObjGUIDs.end();)
     {
-        DynamicObject* dynObj = ObjectAccessor::GetDynamicObject(*this,*i);
+        DynamicObject* dynObj = GetMap()->GetDynamicObject(*i);
         if(!dynObj)
         {
             i = m_dynObjGUIDs.erase(i);
@@ -4284,7 +4263,7 @@ void Unit::RemoveAllDynObjects()
 {
     while(!m_dynObjGUIDs.empty())
     {
-        DynamicObject* dynObj = ObjectAccessor::GetDynamicObject(*this,*m_dynObjGUIDs.begin());
+        DynamicObject* dynObj = GetMap()->GetDynamicObject(*m_dynObjGUIDs.begin());
         if(dynObj)
             dynObj->Delete();
         m_dynObjGUIDs.erase(m_dynObjGUIDs.begin());
@@ -4295,7 +4274,7 @@ DynamicObject * Unit::GetDynObject(uint32 spellId, uint32 effIndex)
 {
     for (DynObjectGUIDs::iterator i = m_dynObjGUIDs.begin(); i != m_dynObjGUIDs.end();)
     {
-        DynamicObject* dynObj = ObjectAccessor::GetDynamicObject(*this,*i);
+        DynamicObject* dynObj = GetMap()->GetDynamicObject(*i);
         if(!dynObj)
         {
             i = m_dynObjGUIDs.erase(i);
@@ -4313,7 +4292,7 @@ DynamicObject * Unit::GetDynObject(uint32 spellId)
 {
     for (DynObjectGUIDs::iterator i = m_dynObjGUIDs.begin(); i != m_dynObjGUIDs.end();)
     {
-        DynamicObject* dynObj = ObjectAccessor::GetDynamicObject(*this,*i);
+        DynamicObject* dynObj = GetMap()->GetDynamicObject(*i);
         if(!dynObj)
         {
             i = m_dynObjGUIDs.erase(i);
@@ -4324,6 +4303,15 @@ DynamicObject * Unit::GetDynObject(uint32 spellId)
             return dynObj;
         ++i;
     }
+    return NULL;
+}
+
+GameObject* Unit::GetGameObject(uint32 spellId) const
+{
+    for (GameObjectList::const_iterator i = m_gameObj.begin(); i != m_gameObj.end();)
+        if ((*i)->GetSpellId() == spellId)
+            return *i;
+
     return NULL;
 }
 
@@ -4377,7 +4365,7 @@ void Unit::RemoveGameObject(uint32 spellid, bool del)
 {
     if(m_gameObj.empty())
         return;
-    std::list<GameObject*>::iterator i, next;
+    GameObjectList::iterator i, next;
     for (i = m_gameObj.begin(); i != m_gameObj.end(); i = next)
     {
         next = i;
@@ -4400,7 +4388,7 @@ void Unit::RemoveGameObject(uint32 spellid, bool del)
 void Unit::RemoveAllGameObjects()
 {
     // remove references to unit
-    for(std::list<GameObject*>::iterator i = m_gameObj.begin(); i != m_gameObj.end();)
+    for(GameObjectList::iterator i = m_gameObj.begin(); i != m_gameObj.end();)
     {
         (*i)->SetOwnerGUID(0);
         (*i)->SetRespawnTime(0);
@@ -6959,9 +6947,6 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     m_attacking = victim;
     m_attacking->_addAttacker(this);
 
-    if(m_attacking->GetTypeId()==TYPEID_UNIT && ((Creature*)m_attacking)->AI())
-        ((Creature*)m_attacking)->AI()->AttackedBy(this);
-
     if(GetTypeId()==TYPEID_UNIT)
     {
         WorldPacket data(SMSG_AI_REACTION, 12);
@@ -7008,9 +6993,9 @@ bool Unit::AttackStop(bool targetSwitch /*=false*/)
     return true;
 }
 
-void Unit::CombatStop(bool cast)
+void Unit::CombatStop(bool includingCast)
 {
-    if(cast& IsNonMeleeSpellCasted(false))
+    if (includingCast && IsNonMeleeSpellCasted(false))
         InterruptNonMeleeSpells(false);
 
     AttackStop();
@@ -7020,19 +7005,19 @@ void Unit::CombatStop(bool cast)
     ClearInCombat();
 }
 
-void Unit::CombatStopWithPets(bool cast)
+void Unit::CombatStopWithPets(bool includingCast)
 {
-    CombatStop(cast);
+    CombatStop(includingCast);
     if(Pet* pet = GetPet())
-        pet->CombatStop(cast);
+        pet->CombatStop(includingCast);
     if(Unit* charm = GetCharm())
-        charm->CombatStop(cast);
+        charm->CombatStop(includingCast);
     if(GetTypeId()==TYPEID_PLAYER)
     {
         GuardianPetList const& guardians = ((Player*)this)->GetGuardians();
         for(GuardianPetList::const_iterator itr = guardians.begin(); itr != guardians.end(); ++itr)
             if(Unit* guardian = Unit::GetUnit(*this,*itr))
-                guardian->CombatStop(cast);
+                guardian->CombatStop(includingCast);
     }
 }
 
@@ -7053,7 +7038,7 @@ bool Unit::isAttackingPlayer() const
     {
         if(m_TotemSlot[i])
         {
-            Creature *totem = ObjectAccessor::GetCreature(*this, m_TotemSlot[i]);
+            Creature *totem = GetMap()->GetCreature(m_TotemSlot[i]);
             if(totem && totem->isAttackingPlayer())
                 return true;
         }
@@ -7208,10 +7193,25 @@ void Unit::UnsummonAllTotems()
         if(!m_TotemSlot[i])
             continue;
 
-        Creature *OldTotem = ObjectAccessor::GetCreature(*this, m_TotemSlot[i]);
+        Creature *OldTotem = GetMap()->GetCreature(m_TotemSlot[i]);
         if (OldTotem && OldTotem->isTotem())
             ((Totem*)OldTotem)->UnSummon();
     }
+}
+
+int32 Unit::DealHeal(Unit *pVictim, uint32 addhealth, SpellEntry const *spellProto, bool critical)
+{
+    int32 gain = pVictim->ModifyHealth(int32(addhealth));
+
+    if (GetTypeId()==TYPEID_PLAYER)
+    {
+        SendHealSpellLog(pVictim, spellProto->Id, addhealth, critical);
+
+        if (BattleGround *bg = ((Player*)this)->GetBattleGround())
+            bg->UpdatePlayerScore((Player*)this, SCORE_HEALING_DONE, gain);
+    }
+
+    return gain;
 }
 
 void Unit::SendHealSpellLog(Unit *pVictim, uint32 SpellID, uint32 Damage, bool critical)
@@ -10402,8 +10402,8 @@ void Unit::SetFeared(bool apply, uint64 casterGUID, uint32 spellID)
 
             // attack caster if can
             Unit* caster = ObjectAccessor::GetObjectInWorld(casterGUID, (Unit*)NULL);
-            if(caster && caster != getVictim() && ((Creature*)this)->AI())
-                ((Creature*)this)->AI()->AttackStart(caster);
+            if(caster && ((Creature*)this)->AI())
+                ((Creature*)this)->AI()->AttackedBy(caster);
         }
     }
 

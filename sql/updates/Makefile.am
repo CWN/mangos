@@ -51,6 +51,13 @@ pkgdata_DATA = \
 	019_7622_03_mangos_creature_ai_texts.sql \
 	020_7643_01_mangos_db_version.sql \
 	020_7643_02_mangos_mangos_string.sql \
+	021_01_mangos_spell_proc_event.sql \
+	022_01_mangos_spell_proc_event.sql \
+	023_01_mangos_spell_proc_event.sql \
+	024_01_mangos_spell_proc_event.sql \
+	025_7705_01_mangos_command.sql \
+	026_7706_01_mangos_command.sql \
+	027_7714_01_mangos_command.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -81,4 +88,11 @@ EXTRA_DIST = \
 	019_7622_03_mangos_creature_ai_texts.sql \
 	020_7643_01_mangos_db_version.sql \
 	020_7643_02_mangos_mangos_string.sql \
+	021_01_mangos_spell_proc_event.sql \
+	022_01_mangos_spell_proc_event.sql \
+	023_01_mangos_spell_proc_event.sql \
+	024_01_mangos_spell_proc_event.sql \
+	025_7705_01_mangos_command.sql \
+	026_7706_01_mangos_command.sql \
+	027_7714_01_mangos_command.sql \
 	README

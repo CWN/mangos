@@ -1300,7 +1300,7 @@ enum Emote
     EMOTE_ONESHOT_POINT                = 25,
     EMOTE_STATE_STAND                  = 26,
     EMOTE_STATE_READYUNARMED           = 27,
-    EMOTE_STATE_WORK                   = 28,
+    EMOTE_STATE_WORK_SHEATHED          = 28,
     EMOTE_STATE_POINT                  = 29,
     EMOTE_STATE_NONE                   = 30,
     EMOTE_ONESHOT_WOUND                = 33,
@@ -1333,13 +1333,13 @@ enum Emote
     EMOTE_ONESHOT_SALUTE_NOSHEATH      = 113,
     EMOTE_STATE_USESTANDING_NOSHEATHE  = 133,
     EMOTE_ONESHOT_LAUGH_NOSHEATHE      = 153,
-    EMOTE_STATE_WORK_NOSHEATHE         = 173,
+    EMOTE_STATE_WORK                   = 173,
     EMOTE_STATE_SPELLPRECAST           = 193,
     EMOTE_ONESHOT_READYRIFLE           = 213,
     EMOTE_STATE_READYRIFLE             = 214,
-    EMOTE_STATE_WORK_NOSHEATHE_MINING  = 233,
-    EMOTE_STATE_WORK_NOSHEATHE_CHOPWOOD= 234,
-    EMOTE_zzOLDONESHOT_LIFTOFF         = 253,
+    EMOTE_STATE_WORK_MINING            = 233,
+    EMOTE_STATE_WORK_CHOPWOOD          = 234,
+    EMOTE_STATE_APPLAUD                = 253,
     EMOTE_ONESHOT_LIFTOFF              = 254,
     EMOTE_ONESHOT_YES                  = 273,
     EMOTE_ONESHOT_NO                   = 274,
@@ -1389,7 +1389,8 @@ enum Emote
     EMOTE_ONESHOT_CUSTOMSPELL10        = 411,
     EMOTE_STATE_EXCLAIM                = 412,
     EMOTE_STATE_SIT_CHAIR_MED          = 415,
-    EMOTE_STATE_SPELLEFFECT_HOLD       = 422
+    EMOTE_STATE_SPELLEFFECT_HOLD       = 422,
+    EMOTE_STATE_EAT_NO_SHEATHE         = 423,
 };
 
 enum Anim
@@ -1820,8 +1821,8 @@ enum SkillType
     SKILL_BEAST_MASTERY            = 50,
     SKILL_SURVIVAL                 = 51,
     SKILL_MACES                    = 54,
-    SKILL_HOLY                     = 56,
     SKILL_2H_SWORDS                = 55,
+    SKILL_HOLY                     = 56,
     SKILL_SHADOW                   = 78,
     SKILL_DEFENSE                  = 95,
     SKILL_LANG_COMMON              = 98,
@@ -1877,8 +1878,8 @@ enum SkillType
     SKILL_PET_BOAR                 = 211,
     SKILL_PET_CROCILISK            = 212,
     SKILL_PET_CARRION_BIRD         = 213,
-    SKILL_PET_GORILLA              = 215,
     SKILL_PET_CRAB                 = 214,
+    SKILL_PET_GORILLA              = 215,
     SKILL_PET_RAPTOR               = 217,
     SKILL_PET_TALLSTRIDER          = 218,
     SKILL_RACIAL_UNDED             = 220,
@@ -1981,14 +1982,14 @@ inline uint32 SkillByQuestSort(int32 QuestSort)
 
 enum SkillCategory
 {
-    SKILL_CATEGORY_ATTRIBUTES    =  5,
-    SKILL_CATEGORY_WEAPON        =  6,
-    SKILL_CATEGORY_CLASS         =  7,
-    SKILL_CATEGORY_ARMOR         =  8,
-    SKILL_CATEGORY_SECONDARY     =  9,                      // secondary professions
+    SKILL_CATEGORY_ATTRIBUTES    = 5,
+    SKILL_CATEGORY_WEAPON        = 6,
+    SKILL_CATEGORY_CLASS         = 7,
+    SKILL_CATEGORY_ARMOR         = 8,
+    SKILL_CATEGORY_SECONDARY     = 9,                       // secondary professions
     SKILL_CATEGORY_LANGUAGES     = 10,
     SKILL_CATEGORY_PROFESSION    = 11,                      // primary professions
-    SKILL_CATEGORY_NOT_DISPLAYED = 12
+    SKILL_CATEGORY_GENERIC       = 12
 };
 
 enum TotemCategory

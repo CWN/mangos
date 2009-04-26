@@ -476,6 +476,18 @@ void ObjectMgr::LoadCreatureTemplates()
                 continue;
             }
 
+            if(heroicInfo->AIName && *heroicInfo->AIName)
+            {
+                sLog.outErrorDb("Heroic mode creature (Entry: %u) has `AIName`, but in any case will used normal mode creature (Entry: %u) AIName.",cInfo->HeroicEntry,i);
+                continue;
+            }
+
+            if(heroicInfo->ScriptID)
+            {
+                sLog.outErrorDb("Heroic mode creature (Entry: %u) has `ScriptName`, but in any case will used normal mode creature (Entry: %u) ScriptName.",cInfo->HeroicEntry,i);
+                continue;
+            }
+
             hasHeroicEntries.insert(i);
             heroicEntries.insert(cInfo->HeroicEntry);
         }
@@ -936,7 +948,15 @@ void ObjectMgr::LoadGameobjects()
         data.rotation3      = fields[10].GetFloat();
         data.spawntimesecs  = fields[11].GetInt32();
         data.animprogress   = fields[12].GetUInt32();
-        data.go_state       = fields[13].GetUInt32();
+
+        uint32 go_state     = fields[13].GetUInt32();
+        if (go_state >= MAX_GO_STATE)
+        {
+            sLog.outErrorDb("Table `gameobject` have gameobject (GUID: %u Entry: %u) with invalid `state` (%u) value, skip",guid,data.id,go_state);
+            continue;
+        }
+        data.go_state       = GOState(go_state);
+
         data.spawnMask      = fields[14].GetUInt8();
         int16 gameEvent     = fields[15].GetInt16();
 
@@ -3459,6 +3479,16 @@ void ObjectMgr::LoadScripts(ScriptMapMap& scripts, char const* tablename)
                 }
 
                 // if(!objmgr.GetMangosStringLocale(tmp.dataint)) will checked after db_script_string loading
+                break;
+            }
+
+            case SCRIPT_COMMAND_EMOTE:
+            {
+                if(!sEmotesStore.LookupEntry(tmp.datalong))
+                {
+                    sLog.outErrorDb("Table `%s` has invalid emote id (datalong = %u) in SCRIPT_COMMAND_EMOTE for script id %u",tablename,tmp.datalong,tmp.id);
+                    continue;
+                }
                 break;
             }
 
@@ -6517,7 +6547,7 @@ SkillRangeType GetSkillRangeType(SkillLineEntry const *pSkill, bool racial)
                 return SKILL_RANGE_MONO;
         default:
         case SKILL_CATEGORY_ATTRIBUTES:                     //not found in dbc
-        case SKILL_CATEGORY_NOT_DISPLAYED:                  //only GENEREC(DND)
+        case SKILL_CATEGORY_GENERIC:                        //only GENERIC(DND)
             return SKILL_RANGE_NONE;
     }
 }
@@ -7057,13 +7087,16 @@ void ObjectMgr::CheckScripts(ScriptMapMap const& scripts,std::set<int32>& ids)
     {
         for(ScriptMap::const_iterator itrM = itrMM->second.begin(); itrM != itrMM->second.end(); ++itrM)
         {
-            if(itrM->second.dataint)
+            switch(itrM->second.command)
             {
-                if(!GetMangosStringLocale (itrM->second.dataint))
-                    sLog.outErrorDb( "Table `db_script_string` has not existed string id  %u", itrM->first);
+                case SCRIPT_COMMAND_TALK:
+                {
+                    if(!GetMangosStringLocale (itrM->second.dataint))
+                        sLog.outErrorDb( "Table `db_script_string` not has string id  %u used db script (ID: %s)", itrM->second.dataint, itrMM->first);
 
-                if(ids.count(itrM->second.dataint))
-                    ids.erase(itrM->second.dataint);
+                    if(ids.count(itrM->second.dataint))
+                        ids.erase(itrM->second.dataint);
+                }
             }
         }
     }
