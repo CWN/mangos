@@ -230,6 +230,17 @@ struct DurabilityQualityEntry
     float     quality_mod;                                  // 1
 };
 
+struct EmotesEntry
+{
+    uint32  Id;                                             // 0
+    //char*   Name;                                         // 1, internal name
+    //uint32  AnimationId;                                  // 2, ref to animationData
+    uint32  Flags;                                          // 3, bitmask, may be unit_flags
+    uint32  EmoteType;                                      // 4, Can be 0, 1 or 2 (determine how emote are shown)
+    uint32  UnitStandState;                                 // 5, uncomfirmed, may be enum UnitStandStateType
+    //uint32  SoundId;                                      // 6, ref to soundEntries
+};
+
 struct EmotesTextEntry
 {
     uint32    Id;
@@ -549,7 +560,7 @@ struct RandomPropertiesPointsEntry
 struct SkillLineEntry
 {
     uint32    id;                                           // 0
-    uint32    categoryId;                                   // 1 (index from SkillLineCategory.dbc)
+    int32     categoryId;                                   // 1 (index from SkillLineCategory.dbc)
     //uint32    skillCostID;                                // 2 not used
     char*     name[16];                                     // 3-18
                                                             // 19 string flags, not used
@@ -797,6 +808,18 @@ struct StableSlotPricesEntry
     uint32 Slot;
     uint32 Price;
 };
+
+/* unused currently
+struct SummonPropertiesEntry
+{
+    uint32  Id;                                             // 0
+    uint32  Group;                                          // 1, enum SummonPropGroup,  0 - can't be controlled?, 1 - something guardian?, 2 - pet?, 3 - something controllable?, 4 - taxi/mount?
+    uint32  Unk2;                                           // 2,                        14 rows > 0
+    uint32  Type;                                           // 3, enum SummonPropType
+    uint32  Slot;                                           // 4,                        0-6
+    uint32  Flags;                                          // 5, enum SummonPropFlags
+};
+*/
 
 struct TalentEntry
 {

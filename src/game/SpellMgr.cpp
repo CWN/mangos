@@ -1156,6 +1156,9 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     break;
                 }
             }
+            // Dragonmaw Illusion, Blood Elf Illusion, Human Illusion, Illidari Agent Illusion, Scarlet Crusade Disguise
+            if(spellInfo_1->SpellIconID == 1691 && spellInfo_2->SpellIconID == 1691)
+                return false;
             break;
         case SPELLFAMILY_MAGE:
             if( spellInfo_2->SpellFamilyName == SPELLFAMILY_MAGE )
@@ -1993,7 +1996,7 @@ void SpellMgr::LoadSpellPetAuras()
     sLog.outString( ">> Loaded %u spell pet auras", count );
 }
 
-/// Some checks for spells, to prevent adding depricated/broken spells for trainers, spell book, etc
+/// Some checks for spells, to prevent adding deprecated/broken spells for trainers, spell book, etc
 bool SpellMgr::IsSpellValid(SpellEntry const* spellInfo, Player* pl, bool msg)
 {
     // not exist
