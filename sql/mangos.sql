@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
   `creature_ai_version` varchar(120) default NULL,
-  `required_020_7643_01_mangos_mangos_string` bit(1) default NULL
+  `required_029_7393_01_mangos_game_event` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -1144,6 +1144,7 @@ CREATE TABLE `game_event` (
   `end_time` timestamp NOT NULL default '0000-00-00 00:00:00' COMMENT 'Absolute end date, the event will never start afler',
   `occurence` bigint(20) unsigned NOT NULL default '86400' COMMENT 'Delay in hours between occurences of the event',
   `length` bigint(20) unsigned NOT NULL default '43200' COMMENT 'Length in hours of the event',
+  `holiday` mediumint(8) unsigned NOT NULL default '0' COMMENT 'Client side holiday id',
   `description` varchar(255) default NULL COMMENT 'Description of the event displayed in console',
   PRIMARY KEY  (`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -2724,9 +2725,9 @@ INSERT INTO `mangos_string` VALUES
 (554,'%s has hidden all zones from you.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (555,'Hover enabled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (556,'Hover disabled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(557,'You have been leveled up (%i)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(558,'You have been leveled down (%i)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(559,'Your level progress has been reset.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(557,'%s level up you to (%i)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(558,'%s level down you to (%i)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(559,'%s reset your level progress.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (560,'The area has been set as explored.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (561,'The area has been set as not explored.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (562,'GUID=%i \'s updateIndex: %i, value:  %i.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -10250,6 +10251,110 @@ INSERT INTO `playercreateinfo_spell` VALUES
 (11,8,28880,'Gift of the Naaru',1),
 (11,8,29932,'Language Draenei',1);
 /*!40000 ALTER TABLE `playercreateinfo_spell` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pool_creature`
+--
+
+DROP TABLE IF EXISTS `pool_creature`;
+CREATE TABLE `pool_creature` (
+  `guid` int(10) unsigned NOT NULL default '0',
+  `pool_entry` mediumint(8) unsigned NOT NULL default '0',
+  `chance` float unsigned NOT NULL default '0',
+  PRIMARY KEY  (`pool_entry`,`guid`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+
+--
+-- Dumping data for table `pool_creature`
+--
+
+LOCK TABLES `pool_creature` WRITE;
+/*!40000 ALTER TABLE `pool_creature` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_creature` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pool_gameobject`
+--
+
+DROP TABLE IF EXISTS `pool_gameobject`;
+CREATE TABLE `pool_gameobject` (
+  `guid` int(10) unsigned NOT NULL default '0',
+  `pool_entry` mediumint(8) unsigned NOT NULL default '0',
+  `chance` float unsigned NOT NULL default '0',
+  PRIMARY KEY  (`guid`,`pool_entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `pool_gameobject`
+--
+
+LOCK TABLES `pool_gameobject` WRITE;
+/*!40000 ALTER TABLE `pool_gameobject` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_gameobject` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pool_pool`
+--
+
+DROP TABLE IF EXISTS `pool_pool`;
+CREATE TABLE `pool_pool` (
+  `pool_id` mediumint(8) unsigned NOT NULL default '0',
+  `mother_pool` mediumint(8) unsigned NOT NULL default '0',
+  `chance` float NOT NULL default '0',
+  PRIMARY KEY  (`pool_id`,`mother_pool`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `pool_pool`
+--
+
+LOCK TABLES `pool_pool` WRITE;
+/*!40000 ALTER TABLE `pool_pool` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_pool` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pool_template`
+--
+
+DROP TABLE IF EXISTS `pool_template`;
+CREATE TABLE `pool_template` (
+  `entry` mediumint(8) unsigned NOT NULL default '0' COMMENT 'Pool entry',
+  `max_limit` int(10) unsigned NOT NULL default '0' COMMENT 'Max number of objects (0) is no limit',
+  PRIMARY KEY  (`entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `pool_template`
+--
+
+LOCK TABLES `pool_template` WRITE;
+/*!40000 ALTER TABLE `pool_template` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `game_event_pool`
+--
+
+DROP TABLE IF EXISTS `game_event_pool`;
+CREATE TABLE `game_event_pool` (
+  `pool_entry` mediumint(8) unsigned NOT NULL default '0' COMMENT 'Id of the pool',
+  `event` smallint(6) NOT NULL default '0' COMMENT 'Put negatives values to remove during event',
+  PRIMARY KEY  (`pool_entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `game_event_pool`
+--
+
+LOCK TABLES `game_event_pool` WRITE;
+/*!40000 ALTER TABLE `game_event_pool` DISABLE KEYS */;
+/*!40000 ALTER TABLE `game_event_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
