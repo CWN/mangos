@@ -44,6 +44,10 @@ void WorldSession::HandleMoveWorldportAckOpcode( WorldPacket & /*recv_data*/ )
 
 void WorldSession::HandleMoveWorldportAckOpcode()
 {
+    // ignore unexpected far teleports
+    if(!GetPlayer()->IsBeingTeleportedFar())
+        return;
+
     // get the teleport destination
     WorldLocation &loc = GetPlayer()->GetTeleportDest();
 
@@ -55,7 +59,7 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     }
     //movement anticheat
     GetPlayer()->m_anti_JustTeleported = 1;
-    //<<< movement anticheat
+    //end movement anticheat
 
     // get the destination map entry, not the current one, this will fix homebind and reset greeting
     MapEntry const* mEntry = sMapStore.LookupEntry(loc.mapid);
@@ -65,7 +69,7 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     if(GetPlayer()->m_InstanceValid == false && !mInstance)
         GetPlayer()->m_InstanceValid = true;
 
-    GetPlayer()->SetSemaphoreTeleport(false);
+    GetPlayer()->SetSemaphoreTeleportFar(false);
 
     // relocate the player to the teleport destination
     GetPlayer()->SetMapId(loc.mapid);
@@ -85,7 +89,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     {
         sLog.outDebug("WORLD: teleport of player %s (%d) to location %d,%f,%f,%f,%f failed", GetPlayer()->GetName(), GetPlayer()->GetGUIDLow(), loc.mapid, loc.x, loc.y, loc.z, loc.o);
         // teleport the player home
-        GetPlayer()->SetDontMove(false);
         if(!GetPlayer()->TeleportTo(GetPlayer()->m_homebindMapId, GetPlayer()->m_homebindX, GetPlayer()->m_homebindY, GetPlayer()->m_homebindZ, GetPlayer()->GetOrientation()))
         {
             // the player must always be able to teleport home
@@ -122,7 +125,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         if(!_player->InBattleGround())
         {
             // short preparations to continue flight
-            GetPlayer()->SetDontMove(false);
             FlightPathMovementGenerator* flight = (FlightPathMovementGenerator*)(GetPlayer()->GetMotionMaster()->top());
             flight->Initialize(*GetPlayer());
             return;
@@ -163,16 +165,53 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         GetPlayer()->CastSpell(GetPlayer(), 2479, true);
 
     // resummon pet
-    if(GetPlayer()->m_temporaryUnsummonedPetNumber)
-    {
-        Pet* NewPet = new Pet;
-        if(!NewPet->LoadPetFromDB(GetPlayer(), 0, GetPlayer()->m_temporaryUnsummonedPetNumber, true))
-            delete NewPet;
+    GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();
+}
 
-        GetPlayer()->m_temporaryUnsummonedPetNumber = 0;
+void WorldSession::HandleMoveTeleportAck(WorldPacket& recv_data)
+{
+    CHECK_PACKET_SIZE(recv_data,8+4);
+
+    sLog.outDebug("MSG_MOVE_TELEPORT_ACK");
+    uint64 guid;
+    uint32 flags, time;
+
+    recv_data >> guid;
+    recv_data >> flags >> time;
+    DEBUG_LOG("Guid " I64FMTD,guid);
+    DEBUG_LOG("Flags %u, time %u",flags, time/IN_MILISECONDS);
+
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
+
+    if(!plMover || !plMover->IsBeingTeleportedNear())
+        return;
+
+    if(guid != plMover->GetGUID())
+        return;
+
+    plMover->SetSemaphoreTeleportNear(false);
+
+    uint32 old_zone = plMover->GetZoneId();
+
+    WorldLocation const& dest = plMover->GetTeleportDest();
+
+    plMover->SetPosition(dest.x, dest.y, dest.z, dest.o, true);
+
+    uint32 newzone, newarea;
+    plMover->GetZoneAndAreaId(newzone,newarea);
+    plMover->UpdateZone(newzone,newarea);
+
+    // new zone
+    if(old_zone != newzone)
+    {
+        // honorless target
+        if(plMover->pvpInfo.inHostileArea)
+            plMover->CastSpell(plMover, 2479, true);
     }
 
-    GetPlayer()->SetDontMove(false);
+    // resummon pet
+    GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();
 }
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
@@ -180,10 +219,14 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     uint32 opcode = recv_data.GetOpcode();
     sLog.outDebug("WORLD: Recvd %s (%u, 0x%X) opcode", LookupOpcodeName(opcode), opcode, opcode);
 
-    if(GetPlayer()->GetDontMove()){
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
+
+    // ignore, waiting processing in WorldSession::HandleMoveWorldportAckOpcode and WorldSession::HandleMoveTeleportAck
+    if(plMover && plMover->IsBeingTeleported()){
         // movement anticheat
-        GetPlayer()->m_anti_JustTeleported = 1;
-        // <<< movement anticheat
+        plMover->m_anti_JustTeleported = 1;
+        // end movement anticheat
         return;
     }
 
@@ -202,9 +245,6 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     if (!MaNGOS::IsValidMapCoord(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o))
         return;
 
-    Unit *mover = _player->m_mover;
-    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
-
     /* handle special cases */
     if (movementInfo.flags & MOVEMENTFLAG_ONTRANSPORT)
     {
@@ -222,18 +262,14 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             // if we boarded a transport, add us to it
             if (plMover && !plMover->m_transport)
             {
-                // if we boarded a transport, add us to it
-                if (!GetPlayer()->m_transport)
+                // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
+                for (MapManager::TransportSet::const_iterator iter = MapManager::Instance().m_Transports.begin(); iter != MapManager::Instance().m_Transports.end(); ++iter)
                 {
-                    // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
-                    for (MapManager::TransportSet::iterator iter = MapManager::Instance().m_Transports.begin(); iter != MapManager::Instance().m_Transports.end(); ++iter)
+                    if ((*iter)->GetGUID() == movementInfo.t_guid)
                     {
-                        if ((*iter)->GetGUID() == movementInfo.t_guid)
-                        {
-                            plMover->m_transport = (*iter);
-                            (*iter)->AddPassenger(plMover);
-                            break;
-                        }
+                        plMover->m_transport = (*iter);
+                        (*iter)->AddPassenger(plMover);
+                        break;
                     }
                 }
             }
@@ -244,7 +280,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                 plMover->m_anti_TransportGUID = obj->GetDBTableGUIDLow();
             else
                 plMover->m_anti_TransportGUID = GUID_LOPART(movementInfo.t_guid);
-            // <<< movement anticheat
+            // end movement anticheat
         }
     } else if (plMover && plMover->m_anti_TransportGUID != 0){
         if (plMover && plMover->m_transport)               // if we were on a transport, leave
@@ -267,7 +303,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         //movement anticheat
         plMover->m_anti_JustJumped = 0;
         plMover->m_anti_JumpBaseZ = 0;
-        //<<< movement anticheat
+        //end movement anticheat
         plMover->HandleFall(movementInfo);
     }
 
@@ -282,11 +318,19 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     //---- anti-cheat features -->>>
     bool check_passed = true;
     #ifdef MOVEMENT_ANTICHEAT_DEBUG
-    sLog.outBasic("MA-%s > client-time:%d fall-time:%d | xyzo: %f,%f,%fo(%f) flags[%X] opcode[%s]| transport (xyzo): %f,%f,%fo(%f)",
+    if (plMover){
+        sLog.outBasic("MA-%s > client-time:%d fall-time:%d | xyzo: %f,%f,%fo(%f) flags[%X] opcode[%s]| transport (xyzo): %f,%f,%fo(%f)",
                     plMover->GetName(),movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,
                     movementInfo.flags, LookupOpcodeName(opcode),movementInfo.t_x,movementInfo.t_y,movementInfo.t_z,movementInfo.t_o);
-    sLog.outBasic("MA-%s Transport > server GUID: %d |  client GUID: (lo)%d - (hi)%d",
+        sLog.outBasic("MA-%s Transport > server GUID: %d |  client GUID: (lo)%d - (hi)%d",
                     plMover->GetName(),plMover->m_anti_TransportGUID, GUID_LOPART(movementInfo.t_guid), GUID_HIPART(movementInfo.t_guid));
+    } else {
+        sLog.outBasic("MA > client-time:%d fall-time:%d | xyzo: %f,%f,%fo(%f) flags[%X] opcode[%s]| transport (xyzo): %f,%f,%fo(%f)",
+                    movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,
+                    movementInfo.flags, LookupOpcodeName(opcode),movementInfo.t_x,movementInfo.t_y,movementInfo.t_z,movementInfo.t_o);
+        sLog.outBasic("MA Transport > server GUID:  |  client GUID: (lo)%d - (hi)%d",
+                    GUID_LOPART(movementInfo.t_guid), GUID_HIPART(movementInfo.t_guid));
+    }
     #endif
 
     if (plMover && World::GetEnableMvAnticheat())
@@ -294,7 +338,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         //calc time deltas
         int32 cClientTimeDelta = 1500;
         if (plMover->m_anti_LastClientTime !=0){
-            cClientTimeDelta = movementInfo.time - GetPlayer()->m_anti_LastClientTime;
+            cClientTimeDelta = movementInfo.time - plMover->m_anti_LastClientTime;
             plMover->m_anti_DeltaClientTime += cClientTimeDelta;
             plMover->m_anti_LastClientTime = movementInfo.time;
         } else {
@@ -329,7 +373,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             cClientTimeDelta = cServerTimeDelta;
             plMover->m_anti_MistimingCount++;
 
-            sLog.outError("MA-%s, mistaming exception. #:%d, mistiming: %dms ",
+            sLog.outError("MA-%s, mistiming exception. #:%d, mistiming: %dms ",
                             plMover->GetName(), plMover->m_anti_MistimingCount, sync_time);
 
             if (plMover->m_anti_MistimingCount > World::GetMistimingAlarms())
@@ -339,7 +383,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             }
             check_passed = false;
         }
-        // <<< mistiming checks
+        // end mistiming checks
 
 
         uint32 curDest = plMover->m_taxi.GetTaxiDestination(); //check taxi flight
@@ -356,7 +400,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             else move_type = movementInfo.flags & MOVEMENTFLAG_BACKWARD ? MOVE_SWIM_BACK : MOVE_RUN;
 
             float current_speed = plMover->GetSpeed(move_type);
-            // <<< current speed
+            // end current speed
 
             // movement distance
             float allowed_delta= 0;
@@ -366,7 +410,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             float delta_z = plMover->GetPositionZ() - movementInfo.z;
             float real_delta = delta_x * delta_x + delta_y * delta_y;
             float tg_z = -99999; //tangens
-            // <<< movement distance
+            // end movement distance
 
             if (cClientTimeDelta < 0) {cClientTimeDelta = 0;}
             float time_delta = (cClientTimeDelta < 1500) ? (float)cClientTimeDelta/1000 : 1.5f; //normalize time - 1.5 second allowed for heavy loaded server
@@ -391,9 +435,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             {
                 plMover->m_anti_Last_HSpeed = current_speed; // store current speed
                 plMover->m_anti_Last_VSpeed = -2.3f;
-                if (plMover->m_anti_LastSpeedChangeTime != 0) GetPlayer()->m_anti_LastSpeedChangeTime = 0;
+                if (plMover->m_anti_LastSpeedChangeTime != 0) plMover->m_anti_LastSpeedChangeTime = 0;
             }
-            // <<< end calculating section ---------------------
+            // end calculating section ---------------------
 
             //AntiGravitation (thanks to Meekro)
             float JumpHeight = plMover->m_anti_JumpBaseZ - movementInfo.z;
@@ -417,7 +461,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                     plMover->m_anti_JustJumped += 1;
                     plMover->m_anti_JumpBaseZ = movementInfo.z;
                 }
-            } else if (GetPlayer()->IsInWater()) {
+            } else if (plMover->IsInWater()) {
                  plMover->m_anti_JustJumped = 0;
             }
 
@@ -489,7 +533,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                         check_passed = false;
                         #ifdef MOVEMENT_ANTICHEAT_DEBUG
                         sLog.outDebug("MA-%s, teleport to plan exception. plane_z: %f ",
-                                        GetPlayer()->GetName(), plane_z);
+                                        plMover->GetName(), plane_z);
                         #endif
                         if (plMover->m_anti_TeleToPlane_Count > World::GetTeleportToPlaneAlarms())
                         {
@@ -640,7 +684,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             if (!check_passed){
                 if (plMover->m_transport)
                     {
-                        plMover->m_transport->RemovePassenger(GetPlayer());
+                        plMover->m_transport->RemovePassenger(plMover);
                         plMover->m_transport = NULL;
                     }
                     movementInfo.t_x = 0.0f;
@@ -663,11 +707,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 
     if(plMover)                                             // nothing is charmed, or player charmed
     {
-
         plMover->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
         plMover->m_movementInfo = movementInfo;
         plMover->SetUnitMovementFlags(movementInfo.flags);
-
         plMover->UpdateFallInformationIfNeed(movementInfo,recv_data.GetOpcode());
 
         if(plMover->isMovingOrTurning())
@@ -689,10 +731,14 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                 if(plMover->isAlive())
                 {
                     plMover->EnvironmentalDamage(DAMAGE_FALL_TO_VOID, GetPlayer()->GetMaxHealth());
-                    // change the death state to CORPSE to prevent the death timer from
-                    // starting in the next player update
-                    plMover->KillPlayer();
-                    plMover->BuildPlayerRepop();
+                    // pl can be alive if GM/etc
+                    if(!plMover->isAlive())
+                    {
+                        // change the death state to CORPSE to prevent the death timer from
+                        // starting in the next player update
+                        plMover->KillPlayer();
+                        plMover->BuildPlayerRepop();
+                    }
                 }
 
                 // cancel the death timer here if started
@@ -704,7 +750,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             sLog.outError("MA-%s produce %d anticheat alarms",plMover->GetName(),plMover->m_anti_AlarmCount);
             plMover->m_anti_AlarmCount = 0;
         }
-    // <<< movement anticheat
+    // end movement anticheat
     }
     else                                                    // creature charmed
     {
@@ -714,13 +760,13 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     }
     
     } else if (plMover) {
-    plMover->m_anti_AlarmCount++;
-    WorldPacket data;
-    plMover->SetUnitMovementFlags(0);
-    plMover->BuildTeleportAckMsg(&data, plMover->GetPositionX(), plMover->GetPositionY(), plMover->GetPositionZ(), plMover->GetOrientation());
-    plMover->GetSession()->SendPacket(&data);
-    plMover->BuildHeartBeatMsg(&data);
-    plMover->SendMessageToSet(&data, true);
+        plMover->m_anti_AlarmCount++;
+        WorldPacket data;
+        plMover->SetUnitMovementFlags(0);
+        plMover->BuildTeleportAckMsg(&data, plMover->GetPositionX(), plMover->GetPositionY(), plMover->GetPositionZ(), plMover->GetOrientation());
+        plMover->GetSession()->SendPacket(&data);
+        plMover->BuildHeartBeatMsg(&data);
+        plMover->SendMessageToSet(&data, true);
     }
 }
 

@@ -230,7 +230,7 @@ void WorldSession::HandleGameObjectUseOpcode( WorldPacket & recv_data )
     if(_player->m_mover != _player)
         return;
 
-    GameObject *obj = ObjectAccessor::GetGameObject(*_player, guid);
+    GameObject *obj = GetPlayer()->GetMap()->GetGameObject(guid);
 
     if(!obj)
         return;
@@ -254,7 +254,7 @@ void WorldSession::HandleGameobjectReportUse(WorldPacket& recvPacket)
     if(_player->m_mover != _player)
         return;
 
-    GameObject* go = ObjectAccessor::GetGameObject(*_player,guid);
+    GameObject* go = GetPlayer()->GetMap()->GetGameObject(guid);
     if(!go)
         return;
 
@@ -372,17 +372,11 @@ void WorldSession::HandleCancelAuraOpcode( WorldPacket& recvPacket)
         return;
 
     // channeled spell case (it currently casted then)
-    if(IsChanneledSpell(spellInfo))
+    if (IsChanneledSpell(spellInfo))
     {
-        if(Spell* spell = _player->m_currentSpells[CURRENT_CHANNELED_SPELL])
-        {
-            if(spell->m_spellInfo->Id==spellId)
-            {
-                spell->cancel();
-                spell->SetReferencedFromCurrent(false);
-                _player->m_currentSpells[CURRENT_CHANNELED_SPELL] = NULL;
-            }
-        }
+        if (_player->m_currentSpells[CURRENT_CHANNELED_SPELL] &&
+            _player->m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id==spellId)
+            _player->InterruptSpell(CURRENT_CHANNELED_SPELL);
         return;
     }
 
@@ -477,7 +471,7 @@ void WorldSession::HandleTotemDestroy( WorldPacket& recvPacket)
     if(!_player->m_TotemSlot[slotId])
         return;
 
-    Creature* totem = ObjectAccessor::GetCreature(*_player,_player->m_TotemSlot[slotId]);
+    Creature* totem = GetPlayer()->GetMap()->GetCreature(_player->m_TotemSlot[slotId]);
     if(totem && totem->isTotem())
         ((Totem*)totem)->UnSummon();
 }

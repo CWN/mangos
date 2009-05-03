@@ -187,7 +187,7 @@ class MANGOS_DLL_SPEC Object
             return *(((uint8*)&m_uint32Values[ index ])+offset);
         }
 
-        uint8 GetUInt16Value( uint16 index, uint8 offset) const
+        uint16 GetUInt16Value( uint16 index, uint8 offset) const
         {
             ASSERT( index < m_valuesCount || PrintIndexError( index , false) );
             ASSERT( offset < 2 );
@@ -445,8 +445,6 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         virtual void SendMessageToSetInRange(WorldPacket *data, float dist, bool self);
         void BuildHeartBeatMsg( WorldPacket *data ) const;
         void BuildTeleportAckMsg( WorldPacket *data, float x, float y, float z, float ang) const;
-        bool IsBeingTeleported() { return mSemaphoreTeleport; }
-        void SetSemaphoreTeleport(bool semphsetting) { mSemaphoreTeleport = semphsetting; }
 
         void MonsterSay(const char* text, uint32 language, uint64 TargetGuid);
         void MonsterYell(const char* text, uint32 language, uint64 TargetGuid);
@@ -494,7 +492,5 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         float m_positionY;
         float m_positionZ;
         float m_orientation;
-
-        bool mSemaphoreTeleport;
 };
 #endif

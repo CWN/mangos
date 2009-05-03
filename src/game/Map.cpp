@@ -1671,6 +1671,37 @@ uint16 Map::GetAreaFlag(float x, float y, float z) const
                 if (x > 1299.0f && x < 1839.0f && y > 10.0f && y < 440.0f) areaflag = 685;
             }
             break;
+        // The Makers' Perch (ground) and Makers' Overlook (ground and cave)
+        case 1335:                                          // Sholazar Basin
+            // The Makers' Perch ground (fast box)
+            if (x > 6100.0f && x < 6250.0f && y > 5650.0f && y < 5800.0f)
+            {
+                // nice slow circle
+                if ((x-6183.0f)*(x-6183.0f)+(y-5717.0f)*(y-5717.0f) < 2500.0f)
+                    areaflag = 2189;
+            }
+            // Makers' Overlook (ground and cave)
+            else if (x > 5634.48f && x < 5774.53f  && y < 3475.0f && z > 300.0f)
+            {
+                if(y > 3380.26f || y > 3265.0f && z < 360.0f) areaflag = 2187;
+            }
+            break;
+        // The Makers' Perch (underground)
+        case 2147:                                          // The Stormwright's Shelf (Sholazar Basin)
+            if (x > 6199.0f && x < 6283.0f && y > 5705.0f && y < 5817.0f && z < 38.0f) areaflag = 2189; break;
+        // Makers' Overlook (deep cave)
+        case 267:                                           // Icecrown
+            if (x > 5684.0f && x < 5798.0f && y > 3035.0f && y < 3367.0f && z < 358.0f) areaflag = 2187; break;
+        // Wyrmrest Temple (Dragonblight)
+        case 1814:                                          // Path of the Titans (Dragonblight)
+        case 1897:                                          // The Dragon Wastes (Dragonblight)
+            // fast box
+            if (x > 3400.0f && x < 3700.0f && y > 130.0f && y < 420.0f)
+            {
+                // nice slow circle
+                if ((x-3546.87f)*(x-3546.87f)+(y-272.71f)*(y-272.71f) < 19600.0f) areaflag = 1791;
+            }
+            break;
     }
 
     return areaflag;
@@ -1892,7 +1923,7 @@ void Map::SendInitTransports( Player * player )
 
     bool hasTransport = false;
 
-    for (MapManager::TransportSet::iterator i = tset.begin(); i != tset.end(); ++i)
+    for (MapManager::TransportSet::const_iterator i = tset.begin(); i != tset.end(); ++i)
     {
         // send data for current transport in other place
         if((*i) != player->GetTransport() && (*i)->GetMapId()==i_id)
@@ -1921,7 +1952,7 @@ void Map::SendRemoveTransports( Player * player )
     MapManager::TransportSet& tset = tmap[player->GetMapId()];
 
     // except used transport
-    for (MapManager::TransportSet::iterator i = tset.begin(); i != tset.end(); ++i)
+    for (MapManager::TransportSet::const_iterator i = tset.begin(); i != tset.end(); ++i)
         if((*i) != player->GetTransport() && (*i)->GetMapId()!=i_id)
             (*i)->BuildOutOfRangeUpdateBlock(&transData);
 
@@ -2499,4 +2530,46 @@ void BattleGroundMap::UnloadAll(bool pForce)
     }
 
     Map::UnloadAll(pForce);
+}
+
+Creature*
+Map::GetCreature(uint64 guid)
+{
+    Creature * ret = ObjectAccessor::GetObjectInWorld(guid, (Creature*)NULL);
+    if(!ret)
+        return NULL;
+
+    if(ret->GetMapId() != GetId())
+        return NULL;
+
+    if(ret->GetInstanceId() != GetInstanceId())
+        return NULL;
+
+    return ret;
+}
+
+GameObject*
+Map::GetGameObject(uint64 guid)
+{
+    GameObject * ret = ObjectAccessor::GetObjectInWorld(guid, (GameObject*)NULL);
+    if(!ret)
+        return NULL;
+    if(ret->GetMapId() != GetId())
+        return NULL;
+    if(ret->GetInstanceId() != GetInstanceId())
+        return NULL;
+    return ret;
+}
+
+DynamicObject*
+Map::GetDynamicObject(uint64 guid)
+{
+    DynamicObject * ret = ObjectAccessor::GetObjectInWorld(guid, (DynamicObject*)NULL);
+    if(!ret)
+        return NULL;
+    if(ret->GetMapId() != GetId())
+        return NULL;
+    if(ret->GetInstanceId() != GetInstanceId())
+        return NULL;
+    return ret;
 }

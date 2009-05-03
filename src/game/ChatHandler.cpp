@@ -69,7 +69,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
         bool foundAura = false;
         for(Unit::AuraList::const_iterator i = langAuras.begin();i != langAuras.end(); ++i)
         {
-            if((*i)->GetModifier()->m_miscvalue == lang)
+            if((*i)->GetModifier()->m_miscvalue == int32(lang))
             {
                 foundAura = true;
                 break;
@@ -192,7 +192,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             Player *player = objmgr.GetPlayer(to.c_str());
             uint32 tSecurity = GetSecurity();
             uint32 pSecurity = player ? player->GetSession()->GetSecurity() : SEC_PLAYER;
-            if(!player || tSecurity == SEC_PLAYER && pSecurity > SEC_PLAYER && !player->isAcceptWhispers())
+            if (!player || (tSecurity == SEC_PLAYER && pSecurity > SEC_PLAYER && !player->isAcceptWhispers()))
             {
                 WorldPacket data(SMSG_CHAT_PLAYER_NOT_FOUND, (to.size()+1));
                 data<<to;
@@ -319,7 +319,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             // if player is in battleground, he cannot say to battleground members by /ra
             Group *group = GetPlayer()->GetOriginalGroup();
             // so if player hasn't OriginalGroup and his player->GetGroup() is BG raid or his group isn't raid, then return
-            if( !group && !(group = GetPlayer()->GetGroup()) || group->isBGGroup() || !group->isRaidGroup() )
+            if ((!group && !(group = GetPlayer()->GetGroup())) || group->isBGGroup() || !group->isRaidGroup())
                 return;
 
             WorldPacket data;
@@ -346,7 +346,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 
             // if player is in battleground, he cannot say to battleground members by /ra
             Group *group = GetPlayer()->GetOriginalGroup();
-            if( !group && !(group = GetPlayer()->GetGroup()) || group->isBGGroup() || !group->isRaidGroup() )
+            if ((!group && !(group = GetPlayer()->GetGroup())) || group->isBGGroup() || !group->isRaidGroup())
                 return;
 
             WorldPacket data;
@@ -587,8 +587,8 @@ void WorldSession::HandleTextEmoteOpcode( WorldPacket & recv_data )
     GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_DO_EMOTE, text_emote, 0, unit);
 
     //Send scripted event call
-    if (unit && unit->GetTypeId()==TYPEID_UNIT && Script)
-        Script->ReceiveEmote(GetPlayer(),(Creature*)unit,text_emote);
+    if (unit && unit->GetTypeId()==TYPEID_UNIT && ((Creature*)unit)->AI())
+        ((Creature*)unit)->AI()->ReceiveEmote(GetPlayer(),text_emote);
 }
 
 void WorldSession::HandleChatIgnoredOpcode(WorldPacket& recv_data )

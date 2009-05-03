@@ -42,7 +42,8 @@ const char CreatureTypefmt[]="nxxxxxxxxxxxxxxxxxx";
 const char CurrencyTypesfmt[]="xnxi";
 const char DurabilityCostsfmt[]="niiiiiiiiiiiiiiiiiiiiiiiiiiiii";
 const char DurabilityQualityfmt[]="nf";
-const char EmoteEntryfmt[]="nxixxxxxxxxxxxxxxxx";
+const char EmotesEntryfmt[]="nxxiiix";
+const char EmotesTextEntryfmt[]="nxixxxxxxxxxxxxxxxx";
 const char FactionEntryfmt[]="niiiiiiiiiiiiiiiiiissssssssssssssssxxxxxxxxxxxxxxxxxx";
 const char FactionTemplateEntryfmt[]="niiiiiiiiiiiii";
 const char GemPropertiesEntryfmt[]="nixxi";
@@ -103,7 +104,7 @@ const char TransportAnimationfmt[]="niifffi";
 const char VehicleEntryfmt[]="niffffiiiiiiiiffffiiiiiifffffffffffssssfifi";
 const char VehicleSeatEntryfmt[]="niiffffffffffiiiiiifffffffiiifffiiiiiiiffiiiii";
 const char WorldMapAreaEntryfmt[]="xinxffffix";
-const char WorldSafeLocsEntryfmt[]="nifffxxxxxxxxxxxxxxxxx";
 const char WorldMapOverlayEntryfmt[]="nxiiiixxxxxxxxxxx";
+const char WorldSafeLocsEntryfmt[]="nifffxxxxxxxxxxxxxxxxx";
 
 #endif

@@ -46,7 +46,7 @@ void WorldSession::HandleTaxiNodeStatusQueryOpcode( WorldPacket & recv_data )
 void WorldSession::SendTaxiStatus( uint64 guid )
 {
     // cheating checks
-    Creature *unit = ObjectAccessor::GetCreature(*_player, guid);
+    Creature *unit = GetPlayer()->GetMap()->GetCreature(guid);
     if (!unit)
     {
         sLog.outDebug( "WorldSession::SendTaxiStatus - Unit (GUID: %u) not found.", uint32(GUID_LOPART(guid)) );
@@ -78,7 +78,7 @@ void WorldSession::HandleTaxiQueryAvailableNodes( WorldPacket & recv_data )
     recv_data >> guid;
 
     // cheating checks
-    Creature *unit = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_FLIGHTMASTER);
+    Creature *unit = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_FLIGHTMASTER);
     if (!unit)
     {
         sLog.outDebug( "WORLD: HandleTaxiQueryAvailableNodes - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
@@ -165,7 +165,7 @@ void WorldSession::HandleActivateTaxiFarOpcode ( WorldPacket & recv_data )
 
     recv_data >> guid >> _totalcost >> node_count;
 
-    Creature *npc = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_FLIGHTMASTER);
+    Creature *npc = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_FLIGHTMASTER);
     if (!npc)
     {
         sLog.outDebug( "WORLD: HandleActivateTaxiFarOpcode - Unit (GUID: %u) not found or you can't interact with it.", uint32(GUID_LOPART(guid)) );
@@ -202,15 +202,16 @@ void WorldSession::HandleTaxiNextDestinationOpcode(WorldPacket& recv_data)
 
     //movement anticheat code
     /* extract packet */
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
+    if (!plMover)
+        return;
+
     MovementInfo movementInfo;
     ReadMovementInfo(recv_data, &movementInfo);
     //<<< end movement anticheat
     
     uint32 curDest = GetPlayer()->m_taxi.GetTaxiDestination();
-
-    //sLog.outBasic("MA-%s > | xyzo: %f,%f,%fo(%f) flags[%X] | curloc: %d | destloc: %d ",
-    //                GetPlayer()->GetName(),movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,
-    //                movementInfo.flags, curloc,curDest);
 
     if(!curDest)
     {
@@ -247,6 +248,10 @@ void WorldSession::HandleTaxiNextDestinationOpcode(WorldPacket& recv_data)
     //movment anticheat
     uint32 curloc = objmgr.GetNearestTaxiNode(movementInfo.x,movementInfo.y,movementInfo.z,GetPlayer()->GetMapId(),GetPlayer( )->GetTeam(), curDest);
     //end movement anticheat
+
+    //sLog.outBasic("MA-%s > | xyzo: %f,%f,%fo(%f) flags[%X] | curloc: %d | destloc: %d ",
+    //                GetPlayer()->GetName(),movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,
+    //                movementInfo.flags, curloc,curDest);
 
     TaxiNodesEntry const* curDestNode = sTaxiNodesStore.LookupEntry(curDest);
 
@@ -360,7 +365,7 @@ void WorldSession::HandleActivateTaxiOpcode( WorldPacket & recv_data )
 
     recv_data >> guid >> nodes[0] >> nodes[1];
     sLog.outDebug( "WORLD: Received CMSG_ACTIVATETAXI from %d to %d" ,nodes[0],nodes[1]);
-    Creature *npc = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_FLIGHTMASTER);
+    Creature *npc = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_FLIGHTMASTER);
     if (!npc)
     {
         sLog.outDebug( "WORLD: HandleActivateTaxiOpcode - Unit (GUID: %u) not found or you can't interact with it.", uint32(GUID_LOPART(guid)) );
