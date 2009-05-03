@@ -107,8 +107,8 @@ libmangosgame_a_SOURCES = \
 	FleeingMovementGenerator.cpp \
 	FleeingMovementGenerator.h \
 	Formulas.h \
-	GameEvent.cpp \
-	GameEvent.h \
+	GameEventMgr.cpp \
+	GameEventMgr.h \
 	GameObject.cpp \
 	GameObject.h \
 	GlobalEvents.cpp \
@@ -204,6 +204,8 @@ libmangosgame_a_SOURCES = \
 	PlayerDump.h \
 	PointMovementGenerator.cpp \
 	PointMovementGenerator.h \
+	PoolHandler.cpp \
+	PoolHandler.h \
 	QueryHandler.cpp \
 	QuestDef.cpp \
 	QuestDef.h \
