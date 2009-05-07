@@ -102,6 +102,7 @@ bool ChatHandler::HandleReloadAllNpcCommand(const char* /*args*/)
     HandleReloadNpcTrainerCommand("a");
     HandleReloadNpcVendorCommand("a");
     HandleReloadPointsOfInterestCommand("a");
+    HandleReloadSpellClickSpellsCommand("a");
     return true;
 }
 
@@ -429,6 +430,14 @@ bool ChatHandler::HandleReloadPointsOfInterestCommand(const char*)
     return true;
 }
 
+bool ChatHandler::HandleReloadSpellClickSpellsCommand(const char*)
+{
+    sLog.outString( "Re-Loading `npc_spellclick_spells` Table!" );
+    objmgr.LoadNPCSpellClickSpells();
+    SendGlobalSysMessage("DB table `npc_spellclick_spells` reloaded.");
+    return true;
+}
+
 bool ChatHandler::HandleReloadReservedNameCommand(const char*)
 {
     sLog.outString( "Loading ReservedNames... (`reserved_name`)" );
@@ -665,7 +674,7 @@ bool ChatHandler::HandleReloadSpellScriptsCommand(const char* arg)
     return true;
 }
 
-bool ChatHandler::HandleReloadDbScriptStringCommand(const char* arg)
+bool ChatHandler::HandleReloadDbScriptStringCommand(const char* /*arg*/)
 {
     sLog.outString( "Re-Loading Script strings from `db_script_string`...");
     objmgr.LoadDbScriptStrings();
@@ -1998,7 +2007,7 @@ bool ChatHandler::HandleAddItemCommand(const char* args)
 
     if(args[0]=='[')                                        // [name] manual form
     {
-        char* citemName = citemName = strtok((char*)args, "]");
+        char* citemName = strtok((char*)args, "]");
 
         if(citemName && citemName[0])
         {
@@ -3076,6 +3085,68 @@ bool ChatHandler::HandleLookupObjectCommand(const char* args)
     return true;
 }
 
+bool ChatHandler::HandleLookupTaxiNodeCommand(const char * args)
+{
+    if(!*args)
+        return false;
+
+    std::string namepart = args;
+    std::wstring wnamepart;
+
+    if(!Utf8toWStr(namepart,wnamepart))
+        return false;
+
+    // converting string that we try to find to lower case
+    wstrToLower( wnamepart );
+
+    uint32 counter = 0;                                     // Counter for figure out that we found smth.
+
+    // Search in TaxiNodes.dbc
+    for (uint32 id = 0; id < sTaxiNodesStore.GetNumRows(); id++)
+    {
+        TaxiNodesEntry const *nodeEntry = sTaxiNodesStore.LookupEntry(id);
+        if(nodeEntry)
+        {
+            int loc = m_session ? m_session->GetSessionDbcLocale() : sWorld.GetDefaultDbcLocale();
+            std::string name = nodeEntry->name[loc];
+            if(name.empty())
+                continue;
+
+            if (!Utf8FitTo(name, wnamepart))
+            {
+                loc = 0;
+                for(; loc < MAX_LOCALE; ++loc)
+                {
+                    if(m_session && loc==m_session->GetSessionDbcLocale())
+                        continue;
+
+                    name = nodeEntry->name[loc];
+                    if(name.empty())
+                        continue;
+
+                    if (Utf8FitTo(name, wnamepart))
+                        break;
+                }
+            }
+
+            if(loc < MAX_LOCALE)
+            {
+                // send taxinode in "id - [name] (Map:m X:x Y:y Z:z)" format
+                if (m_session)
+                    PSendSysMessage (LANG_TAXINODE_ENTRY_LIST_CHAT, id, id, name.c_str(),localeNames[loc],
+                        nodeEntry->map_id,nodeEntry->x,nodeEntry->y,nodeEntry->z);
+                else
+                    PSendSysMessage (LANG_TAXINODE_ENTRY_LIST_CONSOLE, id, name.c_str(), localeNames[loc],
+                        nodeEntry->map_id,nodeEntry->x,nodeEntry->y,nodeEntry->z);
+                ++counter;
+            }
+        }
+    }
+    if (counter == 0)                                       // if counter == 0 then we found nth
+        SendSysMessage(LANG_COMMAND_NOSPELLFOUND);
+    return true;
+}
+
 /** \brief GM command level 3 - Create a guild.
  *
  * This command allows a GM (level 3) to create a guild.
@@ -3411,7 +3482,7 @@ bool ChatHandler::HandleDamageCommand(const char * args)
     if(!spellid || !sSpellStore.LookupEntry(spellid))
         return false;
 
-    m_session->GetPlayer()->SpellNonMeleeDamageLog(target, spellid, damage, false);
+    m_session->GetPlayer()->SpellNonMeleeDamageLog(target, spellid, damage);
     return true;
 }
 
@@ -4911,7 +4982,7 @@ bool ChatHandler::HandleResetAllCommand(const char * args)
     return true;
 }
 
-bool ChatHandler::HandleServerShutDownCancelCommand(const char* args)
+bool ChatHandler::HandleServerShutDownCancelCommand(const char* /*args*/)
 {
     sWorld.ShutdownCancel();
     return true;
@@ -4928,7 +4999,7 @@ bool ChatHandler::HandleServerShutDownCommand(const char* args)
     int32 time = atoi (time_str);
 
     ///- Prevent interpret wrong arg value as 0 secs shutdown time
-    if(time == 0 && (time_str[0]!='0' || time_str[1]!='\0') || time < 0)
+    if ((time == 0 && (time_str[0]!='0' || time_str[1]!='\0')) || time < 0)
         return false;
 
     if (exitcode_str)
@@ -6803,7 +6874,7 @@ bool ChatHandler::HandleModifyGenderCommand(const char *args)
 
     if(!player)
     {
-        PSendSysMessage(LANG_NO_PLAYER);
+        PSendSysMessage(LANG_PLAYER_NOT_FOUND);
         SetSentErrorMessage(true);
         return false;
     }

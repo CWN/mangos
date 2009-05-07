@@ -504,7 +504,7 @@ void Spell::EffectSchoolDMG(uint32 effect_idx)
                 // Gouge
                 else if(m_spellInfo->SpellFamilyFlags & 0x0000000000000008LL)
                 {
-                    damage += int32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK)*0.02f);
+                    damage += int32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK)*0.21f);
                 }
                 // Instant Poison
                 else if(m_spellInfo->SpellFamilyFlags & 0x0000000000002000LL)
@@ -1107,6 +1107,19 @@ void Spell::EffectDummy(uint32 i)
 
                     m_caster->CastSpell(m_caster, 30452, true, NULL);
                     return;
+                }
+                case 51592:                                 // Pickup Primordial Hatchling
+                {
+                    if(!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    Creature* creatureTarget = (Creature*)unitTarget;
+
+                    creatureTarget->setDeathState(JUST_DIED);
+                    creatureTarget->RemoveCorpse();
+                    creatureTarget->SetHealth(0);           // just for nice GM-mode view
+                    return;
+
                 }
                 case 52308:
                 {
@@ -2153,7 +2166,6 @@ void Spell::EffectTeleportUnits(uint32 i)
                 return;
             }
             // Init dest coordinates
-            uint32 mapid = m_caster->GetMapId();
             float x = m_targets.m_destX;
             float y = m_targets.m_destY;
             float z = m_targets.m_destZ;
@@ -2555,7 +2567,7 @@ void Spell::EffectHealthLeech(uint32 i)
 
     int32 new_damage = int32(damage*multiplier);
     uint32 curHealth = unitTarget->GetHealth();
-    new_damage = m_caster->SpellNonMeleeDamageLog(unitTarget, m_spellInfo->Id, new_damage, m_IsTriggeredSpell, true);
+    new_damage = m_caster->SpellNonMeleeDamageLog(unitTarget, m_spellInfo->Id, new_damage );
     if(curHealth < new_damage)
         new_damage = curHealth;
 
@@ -2922,6 +2934,8 @@ void Spell::SendLoot(uint64 guid, LootType loottype)
                     gameObjTarget->TriggeringLinkedGameObject(trapEntry,m_caster);
 
                 // Don't return, let loots been taken
+            default:
+                break;
         }
     }
 
@@ -3846,7 +3860,7 @@ void Spell::EffectEnchantItemPrismatic(uint32 effect_idx)
         }
         if(!add_socket)
         {
-            sLog.outError("Spell::EffectEnchantItemPrismatic: attempt apply enchant spell %u with SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC (%u) but without ITEM_ENCHANTMENT_TYPE_PRISMATIC_SOCKET (u), not suppoted yet.",
+            sLog.outError("Spell::EffectEnchantItemPrismatic: attempt apply enchant spell %u with SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC (%u) but without ITEM_ENCHANTMENT_TYPE_PRISMATIC_SOCKET (%u), not suppoted yet.",
                 m_spellInfo->Id,SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC,ITEM_ENCHANTMENT_TYPE_PRISMATIC_SOCKET);
             return;
         }
@@ -4903,11 +4917,23 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                     uint32 spellID = m_spellInfo->CalculateSimpleValue(0);
                     uint32 questID = m_spellInfo->CalculateSimpleValue(1);
 
-                    if( ((Player*)unitTarget)->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE && !((Player*)unitTarget)->GetQuestRewardStatus (questID) )
+                    if (((Player*)unitTarget)->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE && !((Player*)unitTarget)->GetQuestRewardStatus (questID))
                         unitTarget->CastSpell(unitTarget, spellID, true);
 
                     return;
                 }
+                case 59317:                                 // Teleporting
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // return from top
+                    if (((Player*)unitTarget)->GetAreaId() == 4637)
+                        unitTarget->CastSpell(unitTarget, 59316, true);
+                    // teleport atop
+                    else
+                        unitTarget->CastSpell(unitTarget, 59314, true);
+
+                    return;
                 // random spell learn instead placeholder
                 case 60893:                                 // Northrend Alchemy Research
                 case 61177:                                 // Northrend Inscription Research
@@ -5970,9 +5996,9 @@ void Spell::EffectSummonCritter(uint32 i)
 
     critter->AIM_Initialize();
     critter->InitPetCreateSpells();                         // e.g. disgusting oozeling has a create spell as critter...
-    critter->SetMaxHealth(1);
-    critter->SetHealth(1);
-    critter->SetLevel(1);
+    critter->SelectLevel(critter->GetCreatureInfo());       // some summoned creaters have different from 1 DB data for level/hp
+    critter->SetUInt32Value(UNIT_NPC_FLAGS, critter->GetCreatureInfo()->npcflag);
+                                                            // some mini-pets have quests
 
     // set timer for unsummon
     int32 duration = GetSpellDuration(m_spellInfo);
@@ -6129,7 +6155,7 @@ void Spell::EffectSummonDeadPet(uint32 /*i*/)
 
 void Spell::EffectDestroyAllTotems(uint32 /*i*/)
 {
-    float mana = 0;
+    int32 mana = 0;
     for(int slot = 0;  slot < MAX_TOTEM; ++slot)
     {
         if(!m_caster->m_TotemSlot[slot])
@@ -6141,13 +6167,16 @@ void Spell::EffectDestroyAllTotems(uint32 /*i*/)
             uint32 spell_id = totem->GetUInt32Value(UNIT_CREATED_BY_SPELL);
             SpellEntry const* spellInfo = sSpellStore.LookupEntry(spell_id);
             if(spellInfo)
-                mana += spellInfo->manaCost * damage / 100;
+            {
+                uint32 manacost = m_caster->GetCreateMana() * spellInfo->ManaCostPercentage / 100;
+                mana += manacost * damage / 100;
+            }
             ((Totem*)totem)->UnSummon();
         }
     }
 
-    int32 gain = m_caster->ModifyPower(POWER_MANA,int32(mana));
-    m_caster->SendEnergizeSpellLog(m_caster, m_spellInfo->Id, gain, POWER_MANA);
+    if (mana)
+        m_caster->CastCustomSpell(m_caster, 39104, &mana, NULL, NULL, true);
 }
 
 void Spell::EffectDurabilityDamage(uint32 i)
