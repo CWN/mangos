@@ -218,10 +218,7 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         return true;
     }
 
-    if (getPetType() == HUNTER_PET || (getPetType() == SUMMON_PET && cinfo->type == CREATURE_TYPE_DEMON && owner->getClass() == CLASS_WARLOCK))
-        m_charmInfo->SetPetNumber(pet_number, true);
-    else
-        m_charmInfo->SetPetNumber(pet_number, false);
+    m_charmInfo->SetPetNumber(pet_number, IsPermanentPetFor(owner));
 
     SetOwnerGUID(owner->GetGUID());
     SetDisplayId(fields[3].GetUInt32());
@@ -1494,6 +1491,12 @@ bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 s
         {
             // can be in case spell loading but learned at some previous spell loading
             itr->second->state = PETSPELL_UNCHANGED;
+
+            if(active == ACT_ENABLED)
+                ToggleAutocast(spell_id, true);
+            else if(active == ACT_DISABLED)
+                ToggleAutocast(spell_id, false);
+
             return false;
         }
         else
@@ -1723,8 +1726,13 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
         if (i == m_autospells.size())
         {
             m_autospells.push_back(spellid);
-            itr->second->active = ACT_ENABLED;
-            itr->second->state = PETSPELL_CHANGED;
+
+            if(itr->second->active != ACT_ENABLED)
+            {
+                itr->second->active = ACT_ENABLED;
+                if(itr->second->state != PETSPELL_NEW)
+                    itr->second->state = PETSPELL_CHANGED;
+            }
         }
     }
     else
@@ -1736,9 +1744,32 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
         if (i < m_autospells.size())
         {
             m_autospells.erase(itr2);
-            itr->second->active = ACT_DISABLED;
-            itr->second->state = PETSPELL_CHANGED;
+            if(itr->second->active != ACT_DISABLED)
+            {
+                itr->second->active = ACT_DISABLED;
+                if(itr->second->state != PETSPELL_NEW)
+                    itr->second->state = PETSPELL_CHANGED;
+            }
         }
+    }
+}
+
+bool Pet::IsPermanentPetFor(Player* owner)
+{
+    switch(getPetType())
+    {
+        case SUMMON_PET:
+            switch(owner->getClass())
+            {
+                case CLASS_WARLOCK:
+                    return GetCreatureInfo()->type == CREATURE_TYPE_DEMON;
+                default:
+                    return false;
+            }
+        case HUNTER_PET:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -1792,10 +1823,10 @@ void Pet::LearnPetPassives()
 void Pet::CastPetAuras(bool current)
 {
     Unit* owner = GetOwner();
-    if(!owner)
+    if(!owner || owner->GetTypeId()!=TYPEID_PLAYER)
         return;
 
-    if(getPetType() != HUNTER_PET && (getPetType() != SUMMON_PET || owner->getClass() != CLASS_WARLOCK))
+    if(!IsPermanentPetFor((Player*)owner))
         return;
 
     for(PetAuraSet::const_iterator itr = owner->m_petAuras.begin(); itr != owner->m_petAuras.end();)

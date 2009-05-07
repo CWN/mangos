@@ -1381,7 +1381,7 @@ void Player::BuildEnumData( QueryResult * result, WorldPacket * p_data )
         uint32 petFamily  = 0;
 
         // show pet at selection character in character list  only for non-ghost character
-        if(result && isAlive() && (pClass == CLASS_WARLOCK || pClass == CLASS_HUNTER))
+        if (result && isAlive() && (pClass == CLASS_WARLOCK || pClass == CLASS_HUNTER))
         {
             Field* fields = result->Fetch();
 
@@ -1804,6 +1804,7 @@ void Player::Regenerate(Powers power)
             break;
         case POWER_FOCUS:
         case POWER_HAPPINESS:
+        case POWER_HEALTH:
             break;
     }
 
@@ -1893,8 +1894,8 @@ Player::GetNPCIfCanInteractWith(uint64 guid, uint32 npcflagmask)
     if(!IsInWorld())
         return NULL;
 
-    // exist
-    Creature *unit = GetMap()->GetCreature(guid);
+    // exist (we need look pets also for some interaction (quest/etc)
+    Creature *unit = ObjectAccessor::GetCreatureOrPet(*this,guid);
     if (!unit)
         return NULL;
 
@@ -1910,8 +1911,8 @@ Player::GetNPCIfCanInteractWith(uint64 guid, uint32 npcflagmask)
     if(!unit->isAlive() && (!unit->isSpiritService() || isAlive() ))
         return NULL;
 
-    // not allow interaction under control
-    if(unit->GetCharmerOrOwnerGUID())
+    // not allow interaction under control, but allow with own pets
+    if(unit->GetCharmerGUID())
         return NULL;
 
     // not enemy
@@ -5168,7 +5169,7 @@ int16 Player::GetSkillTempBonusValue(uint32 skill) const
     return 0;
 }
 
-void Player::SendInitialActionButtons()
+void Player::SendInitialActionButtons() const
 {
     sLog.outDetail( "Initializing Action Buttons for '%u'", GetGUIDLow() );
 
@@ -5412,7 +5413,7 @@ uint32 Player::TeamForRace(uint8 race)
         case 1: return HORDE;
     }
 
-    sLog.outError("Race %u have wrong team id in DBC: wrong DBC files?",uint32(race),rEntry->TeamID);
+    sLog.outError("Race %u have wrong teamid %u in DBC: wrong DBC files?",uint32(race),rEntry->TeamID);
     return ALLIANCE;
 }
 
@@ -5840,11 +5841,24 @@ void Player::UpdateZone(uint32 newZone)
         }
     }
 
-    pvpInfo.inHostileArea =
-        GetTeam() == ALLIANCE && zone->team == AREATEAM_HORDE ||
-        GetTeam() == HORDE    && zone->team == AREATEAM_ALLY  ||
-        sWorld.IsPvPRealm()   && zone->team == AREATEAM_NONE  ||
-        InBattleGround();                                   // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
+    // in PvP, any not controlled zone (except zone->team == 6, default case)
+    // in PvE, only opposition team capital
+    switch(zone->team)
+    {
+        case AREATEAM_ALLY:
+            pvpInfo.inHostileArea = GetTeam() != ALLIANCE && (sWorld.IsPvPRealm() || zone->flags & AREA_FLAG_CAPITAL);
+            break;
+        case AREATEAM_HORDE:
+            pvpInfo.inHostileArea = GetTeam() != HORDE && (sWorld.IsPvPRealm() || zone->flags & AREA_FLAG_CAPITAL);
+            break;
+        case AREATEAM_NONE:
+            // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
+            pvpInfo.inHostileArea = sWorld.IsPvPRealm() || InBattleGround();
+            break;
+        default:                                            // 6 in fact
+            pvpInfo.inHostileArea = false;
+            break;
+    }
 
     if(pvpInfo.inHostileArea)                               // in hostile area
     {
@@ -9147,7 +9161,6 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
             if (!pItem->IsBag())
                 return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
 
-            Bag *pBag = (Bag*)pItem;
             if( !HasBankBagSlot( slot ) )
                 return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
 
@@ -11236,7 +11249,9 @@ void Player::PrepareQuestMenu( uint64 guid )
     Object *pObject;
     QuestRelations* pObjectQR;
     QuestRelations* pObjectQIR;
-    Creature *pCreature = GetMap()->GetCreature(guid);
+
+    // pets also can have quests
+    Creature *pCreature = ObjectAccessor::GetCreatureOrPet(*this,guid);
     if( pCreature )
     {
         pObject = (Object*)pCreature;
@@ -11322,7 +11337,9 @@ void Player::SendPreparedQuest( uint64 guid )
         qe._Delay = 0;
         qe._Emote = 0;
         std::string title = "";
-        Creature *pCreature = GetMap()->GetCreature(guid);
+
+        // need pet case for some quests
+        Creature *pCreature = ObjectAccessor::GetCreatureOrPet(*this,guid);
         if( pCreature )
         {
             uint32 textid = pCreature->GetNpcTextId();
@@ -11386,7 +11403,7 @@ Quest const * Player::GetNextQuest( uint64 guid, Quest const *pQuest )
     QuestRelations* pObjectQR;
     QuestRelations* pObjectQIR;
 
-    Creature *pCreature = GetMap()->GetCreature(guid);
+    Creature *pCreature = ObjectAccessor::GetCreatureOrPet(*this,guid);
     if( pCreature )
     {
         pObject = (Object*)pCreature;
@@ -12386,7 +12403,6 @@ void Player::AdjustQuestReqItemCount( Quest const* pQuest, QuestStatusData& ques
             uint32 reqitemcount = pQuest->ReqItemCount[i];
             if( reqitemcount != 0 )
             {
-                uint32 quest_id = pQuest->GetQuestId();
                 uint32 curitemcount = GetItemCount(pQuest->ReqItemId[i],true);
 
                 questStatusData.m_itemcount[i] = std::min(curitemcount, reqitemcount);
@@ -15446,8 +15462,11 @@ bool Player::HasGuardianWithEntry(uint32 entry)
     // pet guid middle part is entry (and creature also)
     // and in guardian list must be guardians with same entry _always_
     for(GuardianPetList::const_iterator itr = m_guardianPets.begin(); itr != m_guardianPets.end(); ++itr)
-        if(GUID_ENPART(*itr)==entry)
-            return true;
+    {
+        if(Pet* pet = ObjectAccessor::GetPet(*itr))
+            if (pet->GetEntry() == entry)
+                return true;
+    }
 
     return false;
 }
@@ -16013,11 +16032,31 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, uint32 mount_i
 
     // starting node too far away (cheat?)
     TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(sourcenode);
-    if( !node || node->map_id != GetMapId() ||
-        (node->x - GetPositionX())*(node->x - GetPositionX())+
-        (node->y - GetPositionY())*(node->y - GetPositionY())+
-        (node->z - GetPositionZ())*(node->z - GetPositionZ()) >
-        (2*INTERACTION_DISTANCE)*(2*INTERACTION_DISTANCE)*(2*INTERACTION_DISTANCE) )
+    if (!node)
+    {
+        WorldPacket data(SMSG_ACTIVATETAXIREPLY, 4);
+        data << uint32(ERR_TAXINOSUCHPATH);
+        GetSession()->SendPacket(&data);
+        return false;
+    }
+
+    // check node starting pos data set case if provided
+    if (node->x != 0.0f || node->y != 0.0f || node->z != 0.0f)
+    {
+        if (node->map_id != GetMapId() ||
+            (node->x - GetPositionX())*(node->x - GetPositionX())+
+            (node->y - GetPositionY())*(node->y - GetPositionY())+
+            (node->z - GetPositionZ())*(node->z - GetPositionZ()) >
+            (2*INTERACTION_DISTANCE)*(2*INTERACTION_DISTANCE)*(2*INTERACTION_DISTANCE))
+        {
+            WorldPacket data(SMSG_ACTIVATETAXIREPLY, 4);
+            data << uint32(ERR_TAXITOOFARAWAY);
+            GetSession()->SendPacket(&data);
+            return false;
+        }
+    }
+    // node must have pos if not spell case (npc!=0)
+    else if(npc)
     {
         WorldPacket data(SMSG_ACTIVATETAXIREPLY, 4);
         data << uint32(ERR_TAXIUNSPECIFIEDSERVERERROR);
@@ -16083,10 +16122,8 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, uint32 mount_i
 
     uint32 money = GetMoney();
 
-    if(npc)
-    {
+    if (npc)
         totalcost = (uint32)ceil(totalcost*GetReputationPriceDiscount(npc));
-    }
 
     if(money < totalcost)
     {
@@ -17765,7 +17802,7 @@ uint32 Player::GetResurrectionSpellId()
                 case 20765: spell_id = 20761; break;        // rank 5
                 case 27239: spell_id = 27240; break;        // rank 6
                 default:
-                    sLog.outError("Unhandled spell %%u: S.Resurrection",(*itr)->GetId());
+                    sLog.outError("Unhandled spell %u: S.Resurrection",(*itr)->GetId());
                     continue;
             }
 
@@ -17909,17 +17946,17 @@ void Player::RewardPlayerAndGroupAtEvent(uint32 creature_id, WorldObject* pRewar
 
 bool Player::IsAtGroupRewardDistance(WorldObject const* pRewardSource) const
 {
-    if(pRewardSource->GetDistance(this) <= sWorld.getConfig(CONFIG_GROUP_XP_DISTANCE))
+    if (pRewardSource->IsWithinDistInMap(this,sWorld.getConfig(CONFIG_GROUP_XP_DISTANCE)))
         return true;
 
-    if(isAlive())
+    if (isAlive())
         return false;
 
     Corpse* corpse = GetCorpse();
-    if(!corpse)
+    if (!corpse)
         return false;
 
-    return pRewardSource->GetDistance(corpse) <= sWorld.getConfig(CONFIG_GROUP_XP_DISTANCE);
+    return pRewardSource->IsWithinDistInMap(corpse,sWorld.getConfig(CONFIG_GROUP_XP_DISTANCE));
 }
 
 uint32 Player::GetBaseWeaponSkillValue (WeaponAttackType attType) const
