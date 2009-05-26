@@ -58,7 +58,7 @@ INSTANTIATE_SINGLETON_1( Master );
 
 volatile uint32 Master::m_masterLoopCounter = 0;
 
-class FreezeDetectorRunnable : public ZThread::Runnable
+class FreezeDetectorRunnable : public ACE_Based::Runnable
 {
 public:
     FreezeDetectorRunnable() { _delaytime = 0; }
@@ -77,7 +77,8 @@ public:
         w_lastchange = 0;
         while(!World::IsStopped())
         {
-            ZThread::Thread::sleep(1000);
+            ACE_Based::Thread::Sleep(1000);
+
             uint32 curtime = getMSTime();
             //DEBUG_LOG("anti-freeze: time=%u, counters=[%u; %u]",curtime,Master::m_masterLoopCounter,World::m_worldLoopCounter);
 
@@ -113,75 +114,77 @@ public:
     }
 };
 
-class RARunnable : public ZThread::Runnable
+class RARunnable : public ACE_Based::Runnable
 {
 public:
-  uint32 numLoops, loopCounter;
+    uint32 numLoops, loopCounter;
 
-  RARunnable ()
-  {
-    uint32 socketSelecttime = sWorld.getConfig (CONFIG_SOCKET_SELECTTIME);
-    numLoops = (sConfig.GetIntDefault ("MaxPingTime", 30) * (MINUTE * 1000000 / socketSelecttime));
-    loopCounter = 0;
-  }
-
-  void
-  checkping ()
-  {
-    // ping if need
-    if ((++loopCounter) == numLoops)
-      {
+    RARunnable ()
+    {
+        uint32 socketSelecttime = sWorld.getConfig (CONFIG_SOCKET_SELECTTIME);
+        numLoops = (sConfig.GetIntDefault ("MaxPingTime", 30) * (MINUTE * 1000000 / socketSelecttime));
         loopCounter = 0;
-        sLog.outDetail ("Ping MySQL to keep connection alive");
-        delete WorldDatabase.Query ("SELECT 1 FROM command LIMIT 1");
-        delete loginDatabase.Query ("SELECT 1 FROM realmlist LIMIT 1");
-        delete CharacterDatabase.Query ("SELECT 1 FROM bugreport LIMIT 1");
-      }
-  }
+    }
 
-  void
-  run (void)
-  {
-    SocketHandler h;
+    void checkping ()
+    {
+        // ping if need
+        if ((++loopCounter) == numLoops)
+        {
+            loopCounter = 0;
+            sLog.outDetail ("Ping MySQL to keep connection alive");
+            delete WorldDatabase.Query ("SELECT 1 FROM command LIMIT 1");
+            delete loginDatabase.Query ("SELECT 1 FROM realmlist LIMIT 1");
+            delete CharacterDatabase.Query ("SELECT 1 FROM bugreport LIMIT 1");
+        }
+    }
 
-    // Launch the RA listener socket
-    ListenSocket<RASocket> RAListenSocket (h);
-    bool usera = sConfig.GetBoolDefault ("Ra.Enable", false);
+    void run ()
+    {
+        SocketHandler h;
 
-    if (usera)
-      {
-        port_t raport = sConfig.GetIntDefault ("Ra.Port", 3443);
-        std::string stringip = sConfig.GetStringDefault ("Ra.IP", "0.0.0.0");
-        ipaddr_t raip;
-        if (!Utility::u2ip (stringip, raip))
-          sLog.outError ("MaNGOS RA can not bind to ip %s", stringip.c_str ());
-        else if (RAListenSocket.Bind (raip, raport))
-          sLog.outError ("MaNGOS RA can not bind to port %d on %s", raport, stringip.c_str ());
+        // Launch the RA listener socket
+        ListenSocket<RASocket> RAListenSocket (h);
+        bool usera = sConfig.GetBoolDefault ("Ra.Enable", false);
+
+        if (usera)
+        {
+            port_t raport = sConfig.GetIntDefault ("Ra.Port", 3443);
+            std::string stringip = sConfig.GetStringDefault ("Ra.IP", "0.0.0.0");
+            ipaddr_t raip;
+            if (!Utility::u2ip (stringip, raip))
+                sLog.outError ("MaNGOS RA can not bind to ip %s", stringip.c_str ());
+            else if (RAListenSocket.Bind (raip, raport))
+                sLog.outError ("MaNGOS RA can not bind to port %d on %s", raport, stringip.c_str ());
+            else
+            {
+                h.Add (&RAListenSocket);
+
+                sLog.outString ("Starting Remote access listner on port %d on %s", raport, stringip.c_str ());
+            }
+        }
+
+        // Socket Selet time is in microseconds , not miliseconds!!
+        uint32 socketSelecttime = sWorld.getConfig (CONFIG_SOCKET_SELECTTIME);
+
+        // if use ra spend time waiting for io, if not use ra ,just sleep
+        if (usera)
+        {
+            while (!World::IsStopped())
+            {
+                h.Select (0, socketSelecttime);
+                checkping ();
+            }
+        }
         else
-          {
-            h.Add (&RAListenSocket);
-
-            sLog.outString ("Starting Remote access listner on port %d on %s", raport, stringip.c_str ());
-          }
-      }
-
-    // Socket Selet time is in microseconds , not miliseconds!!
-    uint32 socketSelecttime = sWorld.getConfig (CONFIG_SOCKET_SELECTTIME);
-
-    // if use ra spend time waiting for io, if not use ra ,just sleep
-    if (usera)
-      while (!World::IsStopped())
         {
-          h.Select (0, socketSelecttime);
-          checkping ();
+            while (!World::IsStopped())
+            {
+                ACE_Based::Thread::Sleep(static_cast<unsigned long> (socketSelecttime / 1000));
+                checkping ();
+            }
         }
-    else
-      while (!World::IsStopped())
-        {
-          ZThread::Thread::sleep (static_cast<unsigned long> (socketSelecttime / 1000));
-          checkping ();
-        }
-  }
+    }
 };
 
 Master::Master()
@@ -220,8 +223,8 @@ int Master::Run()
     _HookSignals();
 
     ///- Launch WorldRunnable thread
-    ZThread::Thread t(new WorldRunnable);
-    t.setPriority ((ZThread::Priority )2);
+    ACE_Based::Thread t(*new WorldRunnable);
+    t.setPriority(ACE_Based::Highest);
 
     // set server online
     loginDatabase.PExecute("UPDATE realmlist SET color = 0, population = 0 WHERE id = '%d'",realmID);
@@ -233,10 +236,10 @@ int Master::Run()
 #endif
     {
         ///- Launch CliRunnable thread
-        ZThread::Thread td1(new CliRunnable);
+        ACE_Based::Thread td1(*new CliRunnable);
     }
 
-    ZThread::Thread td2(new RARunnable);
+    ACE_Based::Thread td2(*new RARunnable);
 
     ///- Handle affinity for multiple processors and process priority on Windows
     #ifdef WIN32
@@ -297,19 +300,19 @@ int Master::Run()
     {
         FreezeDetectorRunnable *fdr = new FreezeDetectorRunnable();
         fdr->SetDelayTime(freeze_delay*1000);
-        ZThread::Thread t(fdr);
-        t.setPriority(ZThread::High);
+        ACE_Based::Thread t(*fdr);
+        t.setPriority(ACE_Based::Highest);
     }
 
     ///- Launch the world listener socket
-  port_t wsport = sWorld.getConfig (CONFIG_PORT_WORLD);
-  std::string bind_ip = sConfig.GetStringDefault ("BindIP", "0.0.0.0");
+    port_t wsport = sWorld.getConfig (CONFIG_PORT_WORLD);
+    std::string bind_ip = sConfig.GetStringDefault ("BindIP", "0.0.0.0");
 
-  if (sWorldSocketMgr->StartNetwork (wsport, bind_ip.c_str ()) == -1)
+    if (sWorldSocketMgr->StartNetwork (wsport, bind_ip.c_str ()) == -1)
     {
-      sLog.outError ("Failed to start network");
-      World::StopNow(ERROR_EXIT_CODE);
-      // go down and shutdown the server
+        sLog.outError ("Failed to start network");
+        World::StopNow(ERROR_EXIT_CODE);
+        // go down and shutdown the server
     }
 
     sWorldSocketMgr->Wait ();

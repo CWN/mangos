@@ -27,6 +27,9 @@ pkgdatadir = $(datadir)/mangos/sql/updates/before_upgrade_to_0.13
 pkgdata_DATA = \
 	020_7643_01_mangos_db_version.sql \
 	029_7393_01_mangos_game_event.sql \
+	032_7059_01_characters.sql \
+	035_7855_01_mangos_pools.sql \
+	039_7896_01_mangos_creature_template.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -34,4 +37,7 @@ pkgdata_DATA = \
 EXTRA_DIST = \
 	020_7643_01_mangos_db_version.sql \
 	029_7393_01_mangos_game_event.sql \
+	032_7059_01_characters.sql \
+	035_7855_01_mangos_pools.sql \
+	039_7896_01_mangos_creature_template.sql \
 	README

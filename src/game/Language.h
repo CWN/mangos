@@ -94,7 +94,6 @@ enum MangosStrings
     LANG_CANNOT_GO_TO_INST_GM           = 105,
     LANG_CANNOT_GO_INST_INST            = 106,
     LANG_CANNOT_SUMMON_INST_INST        = 107,
-
     LANG_SUMMONING                      = 108,
     LANG_SUMMONED_BY                    = 109,
     LANG_TELEPORTING_TO                 = 110,
@@ -102,7 +101,6 @@ enum MangosStrings
     LANG_NO_PLAYER                      = 112,
     LANG_APPEARING_AT                   = 113,
     LANG_APPEARING_TO                   = 114,
-
     LANG_BAD_VALUE                      = 115,
     LANG_NO_CHAR_SELECTED               = 116,
     LANG_NOT_IN_GROUP                   = 117,
@@ -167,7 +165,7 @@ enum MangosStrings
 
     LANG_MAIL_SENT                      = 169,
     LANG_SOUND_NOT_EXIST                = 170,
-    //                                    171,              // not used
+    LANG_CANT_TELEPORT_SELF             = 171,
     LANG_CONSOLE_COMMAND                = 172,
     // Room for more level 1              173-199 not used
 
@@ -263,7 +261,7 @@ enum MangosStrings
     LANG_COMMAND_ADDVENDORITEMITEMS     = 280,
     LANG_COMMAND_KICKSELF               = 281,
     LANG_COMMAND_KICKMESSAGE            = 282,
-    LANG_COMMAND_KICKNOTFOUNDPLAYER     = 283,
+    //                                    283, not used
     LANG_COMMAND_WHISPERACCEPTING       = 284,
     LANG_COMMAND_WHISPERON              = 285,
     LANG_COMMAND_WHISPEROFF             = 286,
@@ -327,7 +325,10 @@ enum MangosStrings
     LANG_CREATURE_NOT_FOLLOW_YOU_NOW    = 342,
     LANG_CREATURE_NON_TAMEABLE          = 343,
     LANG_YOU_ALREADY_HAVE_PET           = 344,
-    // Room for more level 2              345-399 not used
+    //                                    345 used in master branch
+    //                                    346 used in master branch
+    LANG_COMMAND_GOTAXINODENOTFOUND     = 347,
+    // Room for more level 2              348-399 not used
 
     // level 3 chat
     LANG_SCRIPTS_RELOADED               = 400,
@@ -402,8 +403,7 @@ enum MangosStrings
     LANG_COMMAND_TP_ADDED               = 463,
     LANG_COMMAND_TP_ADDEDERR            = 464,
     LANG_COMMAND_TP_DELETED             = 465,
-    //                                    466,              // not used
-
+    LANG_COMMAND_NOTAXINODEFOUND        = 466,
     LANG_COMMAND_TARGET_LISTAURAS       = 467,
     LANG_COMMAND_TARGET_AURADETAIL      = 468,
     LANG_COMMAND_TARGET_LISTAURATYPE    = 469,
@@ -739,7 +739,14 @@ enum MangosStrings
     LANG_YOU_CHANGE_GENDER              = 1120,
     LANG_YOUR_GENDER_CHANGED            = 1121,
     LANG_SKILL_VALUES                   = 1122,
-    // Room for more level 3              1123-1199 not used
+    //                                    1123 used in master branch
+    //                                    1124 used in master branch
+    //                                    1125 used in master branch
+    //                                    1126 used in master branch
+    //                                    1127 used in master branch
+    LANG_TAXINODE_ENTRY_LIST_CHAT       = 1128,
+    LANG_TAXINODE_ENTRY_LIST_CONSOLE    = 1129,
+    // Room for more level 3              1130-1199 not used
 
     // Debug commands
     LANG_CINEMATIC_NOT_EXIST            = 1200,
