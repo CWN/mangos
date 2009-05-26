@@ -40,7 +40,8 @@ enum SpellInterruptFlags
     SPELL_INTERRUPT_FLAG_DAMAGE       = 0x02,
     SPELL_INTERRUPT_FLAG_INTERRUPT    = 0x04,
     SPELL_INTERRUPT_FLAG_AUTOATTACK   = 0x08,
-    //SPELL_INTERRUPT_FLAG_TURNING      = 0x10              // not turning - maybe _complete_ interrupt on direct damage?
+    SPELL_INTERRUPT_FLAG_ABORT_ON_DMG = 0x10,               // _complete_ interrupt on direct damage
+    //SPELL_INTERRUPT_UNK             = 0x20                // unk, 564 of 727 spells having this spell start with "Glyph"
 };
 
 enum SpellChannelInterruptFlags
@@ -816,7 +817,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
             return false;
         }
         bool IsPvP() const { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP); }
-        void SetPvP(bool state) { if(state) SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP); else RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP); }
+        void SetPvP(bool state);
         uint32 GetCreatureType() const;
         uint32 GetCreatureTypeMask() const
         {
@@ -1108,9 +1109,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         float GetWeaponDamageRange(WeaponAttackType attType ,WeaponDamageRange type) const;
         void SetBaseWeaponDamage(WeaponAttackType attType ,WeaponDamageRange damageRange, float value) { m_weaponDamage[attType][damageRange] = value; }
 
-        bool isInFront(Unit const* target,float distance, float arc = M_PI) const;
+        bool isInFrontInMap(Unit const* target,float distance, float arc = M_PI) const;
         void SetInFront(Unit const* target);
-        bool isInBack(Unit const* target, float distance, float arc = M_PI) const;
+        bool isInBackInMap(Unit const* target, float distance, float arc = M_PI) const;
 
         // Visibility system
         UnitVisibility GetVisibility() const { return m_Visibility; }
@@ -1213,7 +1214,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         virtual bool IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges = false);
                                                             // redefined in Creature
         bool IsImmunedToDamage(SpellSchoolMask meleeSchoolMask, bool useCharges = false);
-        virtual bool IsImmunedToSpellEffect(uint32 effect, uint32 mechanic) const;
+        virtual bool IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const;
                                                             // redefined in Creature
 
         uint32 CalcArmorReducedDamage(Unit* pVictim, const uint32 damage);
@@ -1253,7 +1254,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 GetUnitMovementFlags() const { return m_unit_movement_flags; }
         void SetUnitMovementFlags(uint32 f) { m_unit_movement_flags = f; }
 
-        void SetFeared(bool apply, uint64 casterGUID = 0, uint32 spellID = 0);
+        void SetFeared(bool apply, uint64 casterGUID = 0, uint32 spellID = 0, uint32 time = 0);
         void SetConfused(bool apply, uint64 casterGUID = 0, uint32 spellID = 0);
 
         void AddComboPointHolder(uint32 lowguid) { m_ComboPointHolders.insert(lowguid); }

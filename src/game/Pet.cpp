@@ -97,11 +97,7 @@ Pet::Pet(PetType type) : Creature()
 Pet::~Pet()
 {
     if(m_uint32Values)                                      // only for fully created Object
-    {
-        for (PetSpellMap::const_iterator i = m_spells.begin(); i != m_spells.end(); ++i)
-            delete i->second;
         ObjectAccessor::Instance().RemoveObject(this);
-    }
 
     delete m_declinedname;
 }
@@ -254,6 +250,9 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
             sLog.outError("Pet have incorrect type (%u) for pet loading.", getPetType());
     }
 
+    if(owner->IsPvP())
+        SetPvP(true);
+
     InitStatsForLevel(petlevel);
     SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, time(NULL));
     SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, fields[5].GetUInt32());
@@ -381,6 +380,7 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         }
     }
 
+    SynchronizeLevelWithOwner();
     return true;
 }
 
@@ -805,7 +805,7 @@ int32 Pet::GetTPForSpell(uint32 spellid)
 
     for (PetSpellMap::iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
     {
-        if(itr->second->state == PETSPELL_REMOVED)
+        if(itr->second.state == PETSPELL_REMOVED)
             continue;
 
         if(spellmgr.GetFirstSpellInChain(itr->first) == chainstart)
@@ -910,12 +910,11 @@ void Pet::GivePetXP(uint32 xp)
     {
         newXP -= nextLvlXP;
 
-        SetLevel( level + 1 );
+        GivePetLevel(level+1);
         SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, uint32((MaNGOS::XP::xp_to_level(level+1))/4));
 
         level = getLevel();
         nextLvlXP = GetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP);
-        GivePetLevel(level);
     }
 
     SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, newXP);
@@ -1035,7 +1034,7 @@ bool Pet::InitStatsForLevel(uint32 petlevel)
         else if (getLevel() <= cFamily->minScaleLevel)
             scale = cFamily->minScale;
         else
-            scale = cFamily->minScale + (getLevel() - cFamily->minScaleLevel) / cFamily->maxScaleLevel * (cFamily->maxScale - cFamily->minScale);
+            scale = cFamily->minScale + float(getLevel() - cFamily->minScaleLevel) / cFamily->maxScaleLevel * (cFamily->maxScale - cFamily->minScale);
 
         SetFloatValue(OBJECT_FIELD_SCALE_X, scale);
     }
@@ -1296,7 +1295,7 @@ void Pet::_SaveSpellCooldowns()
 
 void Pet::_LoadSpells()
 {
-    QueryResult *result = CharacterDatabase.PQuery("SELECT spell,slot,active FROM pet_spell WHERE guid = '%u'",m_charmInfo->GetPetNumber());
+    QueryResult *result = CharacterDatabase.PQuery("SELECT spell,active FROM pet_spell WHERE guid = '%u'",m_charmInfo->GetPetNumber());
 
     if(result)
     {
@@ -1304,7 +1303,7 @@ void Pet::_LoadSpells()
         {
             Field *fields = result->Fetch();
 
-            addSpell(fields[0].GetUInt32(), fields[2].GetUInt16(), PETSPELL_UNCHANGED, fields[1].GetUInt16());
+            addSpell(fields[0].GetUInt32(), fields[1].GetUInt16(), PETSPELL_UNCHANGED);
         }
         while( result->NextRow() );
 
@@ -1314,19 +1313,32 @@ void Pet::_LoadSpells()
 
 void Pet::_SaveSpells()
 {
-    for (PetSpellMap::const_iterator itr = m_spells.begin(), next = m_spells.begin(); itr != m_spells.end(); itr = next)
+    for (PetSpellMap::iterator itr = m_spells.begin(), next = m_spells.begin(); itr != m_spells.end(); itr = next)
     {
         ++next;
-        if (itr->second->type == PETSPELL_FAMILY) continue; // prevent saving family passives to DB
-        if (itr->second->state == PETSPELL_REMOVED || itr->second->state == PETSPELL_CHANGED)
-            CharacterDatabase.PExecute("DELETE FROM pet_spell WHERE guid = '%u' and spell = '%u'", m_charmInfo->GetPetNumber(), itr->first);
-        if (itr->second->state == PETSPELL_NEW || itr->second->state == PETSPELL_CHANGED)
-            CharacterDatabase.PExecute("INSERT INTO pet_spell (guid,spell,slot,active) VALUES ('%u', '%u', '%u','%u')", m_charmInfo->GetPetNumber(), itr->first, itr->second->slotId,itr->second->active);
 
-        if (itr->second->state == PETSPELL_REMOVED)
-            _removeSpell(itr->first);
-        else
-            itr->second->state = PETSPELL_UNCHANGED;
+        // prevent saving family passives to DB
+        if (itr->second.type == PETSPELL_FAMILY)
+            continue;
+
+        switch(itr->second.state)
+        {
+            case PETSPELL_REMOVED:
+                CharacterDatabase.PExecute("DELETE FROM pet_spell WHERE guid = '%u' and spell = '%u'", m_charmInfo->GetPetNumber(), itr->first);
+                m_spells.erase(itr);
+                continue;
+            case PETSPELL_CHANGED:
+                CharacterDatabase.PExecute("DELETE FROM pet_spell WHERE guid = '%u' and spell = '%u'", m_charmInfo->GetPetNumber(), itr->first);
+                CharacterDatabase.PExecute("INSERT INTO pet_spell (guid,spell,active) VALUES ('%u', '%u', '%u')", m_charmInfo->GetPetNumber(), itr->first, itr->second.active);
+                break;
+            case PETSPELL_NEW:
+                CharacterDatabase.PExecute("INSERT INTO pet_spell (guid,spell,active) VALUES ('%u', '%u', '%u')", m_charmInfo->GetPetNumber(), itr->first, itr->second.active);
+                break;
+            case PETSPELL_UNCHANGED:
+                continue;
+        }
+
+        itr->second.state = PETSPELL_UNCHANGED;
     }
 }
 
@@ -1461,7 +1473,7 @@ void Pet::_SaveAuras()
     }
 }
 
-bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 slot_id, PetSpellType type)
+bool Pet::addSpell(uint32 spell_id,uint16 active /*= ACT_DECIDE*/, PetSpellState state /*= PETSPELL_NEW*/, PetSpellType type /*= PETSPELL_NORMAL*/)
 {
     SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
     if (!spellInfo)
@@ -1481,16 +1493,15 @@ bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 s
     PetSpellMap::iterator itr = m_spells.find(spell_id);
     if (itr != m_spells.end())
     {
-        if (itr->second->state == PETSPELL_REMOVED)
+        if (itr->second.state == PETSPELL_REMOVED)
         {
-            delete itr->second;
             m_spells.erase(itr);
             state = PETSPELL_CHANGED;
         }
-        else if (state == PETSPELL_UNCHANGED && itr->second->state != PETSPELL_UNCHANGED)
+        else if (state == PETSPELL_UNCHANGED && itr->second.state != PETSPELL_UNCHANGED)
         {
             // can be in case spell loading but learned at some previous spell loading
-            itr->second->state = PETSPELL_UNCHANGED;
+            itr->second.state = PETSPELL_UNCHANGED;
 
             if(active == ACT_ENABLED)
                 ToggleAutocast(spell_id, true);
@@ -1505,55 +1516,39 @@ bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 s
 
     uint32 oldspell_id = 0;
 
-    PetSpell *newspell = new PetSpell;
-    newspell->state = state;
-    newspell->type = type;
+    PetSpell newspell;
+    newspell.state = state;
+    newspell.type = type;
 
     if(active == ACT_DECIDE)                                //active was not used before, so we save it's autocast/passive state here
     {
         if(IsPassiveSpell(spell_id))
-            newspell->active = ACT_PASSIVE;
+            newspell.active = ACT_PASSIVE;
         else
-            newspell->active = ACT_DISABLED;
+            newspell.active = ACT_DISABLED;
     }
     else
-        newspell->active = active;
+        newspell.active = active;
 
     uint32 chainstart = spellmgr.GetFirstSpellInChain(spell_id);
 
-    for (PetSpellMap::iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
+    for (PetSpellMap::const_iterator itr2 = m_spells.begin(); itr2 != m_spells.end(); ++itr2)
     {
-        if(itr->second->state == PETSPELL_REMOVED) continue;
+        if(itr2->second.state == PETSPELL_REMOVED) continue;
 
-        if(spellmgr.GetFirstSpellInChain(itr->first) == chainstart)
+        if(spellmgr.GetFirstSpellInChain(itr2->first) == chainstart)
         {
-            slot_id = itr->second->slotId;
-            newspell->active = itr->second->active;
+            newspell.active = itr2->second.active;
 
-            if(newspell->active == ACT_ENABLED)
-                ToggleAutocast(itr->first, false);
+            if(newspell.active == ACT_ENABLED)
+                ToggleAutocast(itr2->first, false);
 
-            oldspell_id = itr->first;
-            removeSpell(itr->first);
+            oldspell_id = itr2->first;
+            removeSpell(itr2->first);
             break;
         }
     }
 
-    uint16 tmpslot=slot_id;
-
-    if (tmpslot == 0xffff)
-    {
-        uint16 maxid = 0;
-        PetSpellMap::iterator itr;
-        for (itr = m_spells.begin(); itr != m_spells.end(); ++itr)
-        {
-            if(itr->second->state == PETSPELL_REMOVED) continue;
-            if (itr->second->slotId > maxid) maxid = itr->second->slotId;
-        }
-        tmpslot = maxid + 1;
-    }
-
-    newspell->slotId = tmpslot;
     m_spells[spell_id] = newspell;
 
     if (IsPassiveSpell(spell_id))
@@ -1561,7 +1556,7 @@ bool Pet::addSpell(uint32 spell_id, uint16 active, PetSpellState state, uint16 s
     else if(state == PETSPELL_NEW)
         m_charmInfo->AddSpellToAB(oldspell_id, spell_id);
 
-    if(newspell->active == ACT_ENABLED)
+    if(newspell.active == ACT_ENABLED)
         ToggleAutocast(spell_id, true);
 
     return true;
@@ -1585,38 +1580,20 @@ void Pet::removeSpell(uint32 spell_id)
     if (itr == m_spells.end())
         return;
 
-    if(itr->second->state == PETSPELL_REMOVED)
+    if(itr->second.state == PETSPELL_REMOVED)
         return;
 
-    if(itr->second->state == PETSPELL_NEW)
-    {
-        delete itr->second;
+    if(itr->second.state == PETSPELL_NEW)
         m_spells.erase(itr);
-    }
     else
-        itr->second->state = PETSPELL_REMOVED;
+        itr->second.state = PETSPELL_REMOVED;
 
     RemoveAurasDueToSpell(spell_id);
-}
-
-bool Pet::_removeSpell(uint32 spell_id)
-{
-    PetSpellMap::iterator itr = m_spells.find(spell_id);
-    if (itr != m_spells.end())
-    {
-        delete itr->second;
-        m_spells.erase(itr);
-        return true;
-    }
-    return false;
 }
 
 void Pet::InitPetCreateSpells()
 {
     m_charmInfo->InitPetActionBar();
-
-    for (PetSpellMap::const_iterator i = m_spells.begin(); i != m_spells.end(); ++i)
-        delete i->second;
     m_spells.clear();
 
     int32 usedtrainpoints = 0;
@@ -1714,7 +1691,7 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
     if(IsPassiveSpell(spellid))
         return;
 
-    PetSpellMap::const_iterator itr = m_spells.find(spellid);
+    PetSpellMap::iterator itr = m_spells.find(spellid);
 
     int i;
 
@@ -1727,11 +1704,11 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
         {
             m_autospells.push_back(spellid);
 
-            if(itr->second->active != ACT_ENABLED)
+            if(itr->second.active != ACT_ENABLED)
             {
-                itr->second->active = ACT_ENABLED;
-                if(itr->second->state != PETSPELL_NEW)
-                    itr->second->state = PETSPELL_CHANGED;
+                itr->second.active = ACT_ENABLED;
+                if(itr->second.state != PETSPELL_NEW)
+                    itr->second.state = PETSPELL_CHANGED;
             }
         }
     }
@@ -1744,11 +1721,11 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
         if (i < m_autospells.size())
         {
             m_autospells.erase(itr2);
-            if(itr->second->active != ACT_DISABLED)
+            if(itr->second.active != ACT_DISABLED)
             {
-                itr->second->active = ACT_DISABLED;
-                if(itr->second->state != PETSPELL_NEW)
-                    itr->second->state = PETSPELL_CHANGED;
+                itr->second.active = ACT_DISABLED;
+                if(itr->second.state != PETSPELL_NEW)
+                    itr->second.state = PETSPELL_CHANGED;
             }
         }
     }
@@ -1798,7 +1775,7 @@ bool Pet::Create(uint32 guidlow, Map *map, uint32 Entry, uint32 pet_number)
 bool Pet::HasSpell(uint32 spell) const
 {
     PetSpellMap::const_iterator itr = m_spells.find(spell);
-    return (itr != m_spells.end() && itr->second->state != PETSPELL_REMOVED );
+    return (itr != m_spells.end() && itr->second.state != PETSPELL_REMOVED );
 }
 
 // Get all passive spells in our skill line
@@ -1816,7 +1793,7 @@ void Pet::LearnPetPassives()
     if(petStore != sPetFamilySpellsStore.end())
     {
         for(PetFamilySpellsSet::const_iterator petSet = petStore->second.begin(); petSet != petStore->second.end(); ++petSet)
-            addSpell(*petSet, ACT_DECIDE, PETSPELL_NEW, 0xffff, PETSPELL_FAMILY);
+            addSpell(*petSet, ACT_DECIDE, PETSPELL_NEW, PETSPELL_FAMILY);
     }
 }
 
@@ -1854,4 +1831,30 @@ void Pet::CastPetAura(PetAura const* aura)
     }
     else
         CastSpell(this, auraId, true);
+}
+
+void Pet::SynchronizeLevelWithOwner()
+{
+    Unit* owner = GetOwner();
+    if (!owner || owner->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    switch(getPetType())
+    {
+        // always same level
+        case SUMMON_PET:
+            GivePetLevel(owner->getLevel());
+            break;
+        // can't be greater owner level
+        case HUNTER_PET:
+            if(getLevel() > owner->getLevel())
+            {
+                GivePetLevel(owner->getLevel());
+                SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, uint32((MaNGOS::XP::xp_to_level(owner->getLevel()))/4));
+                SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, GetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP)-1);
+            }
+            break;
+        default:
+            break;
+    }
 }

@@ -79,11 +79,10 @@ enum PetSpellType
 
 struct PetSpell
 {
-    uint16 slotId;
     uint16 active;
 
-    PetSpellState state : 16;
-    PetSpellType type   : 16;
+    PetSpellState state : 8;
+    PetSpellType type   : 8;
 };
 
 enum ActionFeedback
@@ -117,7 +116,7 @@ enum PetNameInvalidReason
     PET_NAME_DECLENSION_DOESNT_MATCH_BASE_NAME              = 16
 };
 
-typedef UNORDERED_MAP<uint32, PetSpell*> PetSpellMap;
+typedef UNORDERED_MAP<uint32, PetSpell> PetSpellMap;
 typedef std::map<uint32,uint32> TeachSpellMap;
 typedef std::vector<uint32> AutoSpellList;
 
@@ -128,7 +127,7 @@ extern const uint32 LevelStartLoyalty[6];
 
 #define ACTIVE_SPELLS_MAX           4
 
-#define OWNER_MAX_DISTANCE 100
+#define OWNER_MAX_DISTANCE 100.0f
 
 #define PET_FOLLOW_DIST  1
 #define PET_FOLLOW_ANGLE (M_PI/2)
@@ -181,6 +180,7 @@ class Pet : public Creature
         void SetLoyaltyLevel(LoyaltyLevel level);
         void GivePetXP(uint32 xp);
         void GivePetLevel(uint32 level);
+        void SynchronizeLevelWithOwner();
         bool InitStatsForLevel(uint32 level);
         bool HaveInDiet(ItemPrototype const* item) const;
         uint32 GetCurrentFoodBenefitLevel(uint32 itemlevel);
@@ -217,10 +217,9 @@ class Pet : public Creature
         void _LoadSpells();
         void _SaveSpells();
 
-        bool addSpell(uint32 spell_id,uint16 active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, uint16 slot_id=0xffff, PetSpellType type = PETSPELL_NORMAL);
+        bool addSpell(uint32 spell_id,uint16 active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, PetSpellType type = PETSPELL_NORMAL);
         bool learnSpell(uint32 spell_id);
         void removeSpell(uint32 spell_id);
-        bool _removeSpell(uint32 spell_id);
 
         PetSpellMap     m_spells;
         TeachSpellMap   m_teachspells;

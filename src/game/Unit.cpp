@@ -856,7 +856,12 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 
                     if(Spell* spell = pVictim->m_currentSpells[i])
                         if(spell->getState() == SPELL_STATE_PREPARING)
-                            spell->Delayed();
+                        {
+                            if(spell->m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_ABORT_ON_DMG)
+                                pVictim->InterruptSpell(i);
+                            else
+                                spell->Delayed();
+                        }
                 }
             }
 
@@ -3398,7 +3403,7 @@ Spell* Unit::FindCurrentSpellBySpellId(uint32 spell_id) const
     return NULL;
 }
 
-bool Unit::isInFront(Unit const* target, float distance,  float arc) const
+bool Unit::isInFrontInMap(Unit const* target, float distance,  float arc) const
 {
     return IsWithinDistInMap(target, distance) && HasInArc( arc, target );
 }
@@ -3408,7 +3413,7 @@ void Unit::SetInFront(Unit const* target)
     SetOrientation(GetAngle(target));
 }
 
-bool Unit::isInBack(Unit const* target, float distance, float arc) const
+bool Unit::isInBackInMap(Unit const* target, float distance, float arc) const
 {
     return IsWithinDistInMap(target, distance) && !HasInArc( 2 * M_PI - arc, target );
 }
@@ -4323,7 +4328,7 @@ DynamicObject * Unit::GetDynObject(uint32 spellId)
 
 GameObject* Unit::GetGameObject(uint32 spellId) const
 {
-    for (GameObjectList::const_iterator i = m_gameObj.begin(); i != m_gameObj.end();)
+    for (GameObjectList::const_iterator i = m_gameObj.begin(); i != m_gameObj.end(); ++i)
         if ((*i)->GetSpellId() == spellId)
             return *i;
 
@@ -5332,19 +5337,19 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     if( procSpell->SpellFamilyFlags & 0x0000000000000004LL )
                     {
                         triggered_spell_id = 40445;
-                        chance = 25.f;
+                        chance = 25.0f;
                     }
                     // Rejuvenation
                     else if( procSpell->SpellFamilyFlags & 0x0000000000000010LL )
                     {
                         triggered_spell_id = 40446;
-                        chance = 25.f;
+                        chance = 25.0f;
                     }
                     // Mangle (cat/bear)
                     else if( procSpell->SpellFamilyFlags & 0x0000044000000000LL )
                     {
                         triggered_spell_id = 40452;
-                        chance = 40.f;
+                        chance = 40.0f;
                     }
                     else
                         return false;
@@ -5556,13 +5561,13 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     if( procSpell->SpellFamilyFlags & 0x00000000C0000000LL)
                     {
                         triggered_spell_id = 40471;
-                        chance = 15.f;
+                        chance = 15.0f;
                     }
                     // Judgement
                     else if( procSpell->SpellFamilyFlags & 0x0000000000800000LL )
                     {
                         triggered_spell_id = 40472;
-                        chance = 50.f;
+                        chance = 50.0f;
                     }
                     else
                         return false;
@@ -5690,17 +5695,17 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     if (procSpell->SpellFamilyFlags & 0x0000000000000001LL)
                     {
                         triggered_spell_id = 40465;         // Lightning Bolt
-                        chance = 15.f;
+                        chance = 15.0f;
                     }
                     else if (procSpell->SpellFamilyFlags & 0x0000000000000080LL)
                     {
                         triggered_spell_id = 40465;         // Lesser Healing Wave
-                        chance = 10.f;
+                        chance = 10.0f;
                     }
                     else if (procSpell->SpellFamilyFlags & 0x0000001000000000LL)
                     {
                         triggered_spell_id = 40466;         // Stormstrike
-                        chance = 50.f;
+                        chance = 50.0f;
                     }
                     else
                         return false;
@@ -7001,7 +7006,10 @@ bool Unit::AttackStop(bool targetSwitch /*=false*/)
 
     // reset only at real combat stop
     if(!targetSwitch && GetTypeId()==TYPEID_UNIT )
+    {
         ((Creature*)this)->SetNoCallAssistance(false);
+        ((Creature*)this)->SetNoSearchAssistance(false);
+    }
 
     SendAttackStop(victim);
 
@@ -8139,18 +8147,21 @@ bool Unit::IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges)
     return false;
 }
 
-bool Unit::IsImmunedToSpellEffect(uint32 effect, uint32 mechanic) const
+bool Unit::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const
 {
     //If m_immuneToEffect type contain this effect type, IMMUNE effect.
     SpellImmuneList const& effectList = m_spellImmune[IMMUNITY_EFFECT];
     for (SpellImmuneList::const_iterator itr = effectList.begin(); itr != effectList.end(); ++itr)
-        if(itr->type == effect)
+        if(itr->type == spellInfo->Effect[index])
             return true;
 
-    SpellImmuneList const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
-    for (SpellImmuneList::const_iterator itr = mechanicList.begin(); itr != mechanicList.end(); ++itr)
-        if(itr->type == mechanic)
-            return true;
+    if (uint32 mechanic = spellInfo->EffectMechanic[index])
+    {
+        SpellImmuneList const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
+        for (SpellImmuneList::const_iterator itr = mechanicList.begin(); itr != mechanicList.end(); ++itr)
+            if(itr->type == mechanic)
+                return true;
+    }
 
     return false;
 }
@@ -8592,10 +8603,6 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
     if(m_Visibility==VISIBILITY_RESPAWN)
         return false;
 
-    // always seen by owner
-    if(GetCharmerOrOwnerGUID()==u->GetGUID())
-        return true;
-
     // Grid dead/alive checks
     if( u->GetTypeId()==TYPEID_PLAYER)
     {
@@ -8613,6 +8620,10 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
         if(!u->isAlive() || !isAlive())
             return false;
     }
+
+    // always seen by owner
+    if(GetCharmerOrOwnerGUID()==u->GetGUID())
+        return true;
 
     // different visible distance checks
     if(u->isInFlight())                                     // what see player in flight
@@ -8745,9 +8756,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
         return true;
 
     // If there is collision rogue is seen regardless of level difference
-    // TODO: check sizes in DB
-    float distance = GetDistance(u);
-    if (distance < 0.24f)
+    if (IsWithinDist(u,0.24f))
         return true;
 
     //If a mob or player is stunned he will not be able to detect stealth
@@ -8758,14 +8767,14 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
     if(u->GetTypeId() != TYPEID_PLAYER)
     {
         //Always invisible from back and out of aggro range
-        bool isInFront = u->isInFront(this,((Creature const*)u)->GetAttackDistance(this));
+        bool isInFront = u->isInFrontInMap(this,((Creature const*)u)->GetAttackDistance(this));
         if(!isInFront)
             return false;
     }
     else
     {
         //Always invisible from back
-        bool isInFront = u->isInFront(this,(GetTypeId()==TYPEID_PLAYER || GetCharmerOrOwnerGUID()) ? World::GetMaxVisibleDistanceForPlayer() : World::GetMaxVisibleDistanceForCreature());
+        bool isInFront = u->isInFrontInMap(this,(GetTypeId()==TYPEID_PLAYER || GetCharmerOrOwnerGUID()) ? World::GetMaxVisibleDistanceForPlayer() : World::GetMaxVisibleDistanceForCreature());
         if(!isInFront)
             return false;
     }
@@ -8791,7 +8800,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
         //based on wowwiki every 5 mod we have 1 more level diff in calculation
         visibleDistance += (int32(u->GetTotalAuraModifier(SPELL_AURA_MOD_DETECT)) - stealthMod)/5.0f;
 
-        if(distance > visibleDistance)
+        if(!IsWithinDist(u,visibleDistance))
             return false;
     }
 
@@ -10389,7 +10398,7 @@ void Unit::StopMoving()
     SendMessageToSet(&data,false);
 }
 
-void Unit::SetFeared(bool apply, uint64 casterGUID, uint32 spellID)
+void Unit::SetFeared(bool apply, uint64 casterGUID, uint32 spellID, uint32 time)
 {
     if( apply )
     {
@@ -10403,7 +10412,7 @@ void Unit::SetFeared(bool apply, uint64 casterGUID, uint32 spellID)
 
         Unit* caster = ObjectAccessor::GetUnit(*this,casterGUID);
 
-        GetMotionMaster()->MoveFleeing(caster);             // caster==NULL processed in MoveFleeing
+        GetMotionMaster()->MoveFleeing(caster, time);       // caster==NULL processed in MoveFleeing
     }
     else
     {
@@ -10718,7 +10727,7 @@ uint32 Unit::GetCastingTimeForBonus( SpellEntry const *spellProto, DamageEffectT
         if (OriginalCastTime > 7000) OriginalCastTime = 7000;
         if (OriginalCastTime < 1500) OriginalCastTime = 1500;
         // Portion to Over Time
-        float PtOT = (overTime / 15000.f) / ((overTime / 15000.f) + (OriginalCastTime / 3500.f));
+        float PtOT = (overTime / 15000.0f) / ((overTime / 15000.0f) + (OriginalCastTime / 3500.0f));
 
         if ( damagetype == DOT )
             CastingTime = uint32(CastingTime * PtOT);
@@ -10870,6 +10879,9 @@ Pet* Unit::CreateTamedPetFrom(Creature* creatureTarget,uint32 spell_id)
     if(GetTypeId()==TYPEID_PLAYER)
         pet->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
 
+    if(IsPvP())
+        pet->SetPvP(true);
+
     if(!pet->InitStatsForLevel(creatureTarget->getLevel()))
     {
         sLog.outError("ERROR: Pet::InitStatsForLevel() failed for creature (Entry: %u)!",creatureTarget->GetEntry());
@@ -11013,4 +11025,22 @@ void Unit::RemoveAurasAtChanneledTarget(SpellEntry const* spellInfo)
         else
             ++iter;
     }
+}
+
+void Unit::SetPvP( bool state )
+{
+    if(state)
+        SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP);
+    else
+        RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP);
+
+    if(Pet* pet = GetPet())
+        pet->SetPvP(state);
+    if(Unit* charmed = GetCharm())
+        charmed->SetPvP(state);
+
+    for (int8 i = 0; i < MAX_TOTEM; ++i)
+        if(m_TotemSlot[i])
+            if(Creature *totem = GetMap()->GetCreature(m_TotemSlot[i]))
+                totem->SetPvP(state);
 }

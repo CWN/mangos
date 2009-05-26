@@ -21,14 +21,14 @@
 
 #include "Platform/Define.h"
 #include "Policies/Singleton.h"
-#include "zthread/Mutex.h"
+#include "ace/Thread_Mutex.h"
 #include "Common.h"
 #include "Map.h"
 #include "GridStates.h"
 
 class Transport;
 
-class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::ClassLevelLockable<MapManager, ZThread::Mutex> >
+class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::ClassLevelLockable<MapManager, ACE_Thread_Mutex> >
 {
 
     friend class MaNGOS::OperatorNew<MapManager>;
@@ -50,8 +50,18 @@ class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::
             Map const* m = GetBaseMap(mapid);
             return m->GetAreaFlag(x, y, z);
         }
-        uint32 GetAreaId(uint32 mapid, float x, float y, float z) { return Map::GetAreaId(GetAreaFlag(mapid, x, y, z),mapid); }
-        uint32 GetZoneId(uint32 mapid, float x, float y, float z) { return Map::GetZoneId(GetAreaFlag(mapid, x, y, z),mapid); }
+        uint32 GetAreaId(uint32 mapid, float x, float y, float z) const
+        {
+            return Map::GetAreaIdByAreaFlag(GetAreaFlag(mapid, x, y, z),mapid);
+        }
+        uint32 GetZoneId(uint32 mapid, float x, float y, float z) const
+        {
+            return Map::GetZoneIdByAreaFlag(GetAreaFlag(mapid, x, y, z),mapid);
+        }
+        void GetZoneAndAreaId(uint32& zoneid, uint32& areaid, uint32 mapid, float x, float y, float z)
+        {
+            Map::GetZoneAndAreaIdByAreaFlag(zoneid,areaid,GetAreaFlag(mapid, x, y, z),mapid);
+        }
 
         void Initialize(void);
         void Update(uint32);
@@ -137,7 +147,7 @@ class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::
             return (iter == i_maps.end() ? NULL : iter->second);
         }
 
-        typedef MaNGOS::ClassLevelLockable<MapManager, ZThread::Mutex>::Lock Guard;
+        typedef MaNGOS::ClassLevelLockable<MapManager, ACE_Thread_Mutex>::Lock Guard;
         uint32 i_gridCleanUpDelay;
         MapMapType i_maps;
         IntervalTimer i_timer;

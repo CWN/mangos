@@ -71,14 +71,12 @@ enum PlayerSpellState
 
 struct PlayerSpell
 {
-    uint16 slotId          : 16;
     PlayerSpellState state : 8;
     bool active            : 1;
     bool disabled          : 1;
 };
 
-#define SPELL_WITHOUT_SLOT_ID uint16(-1)
-
+// Spell modifier (used for modify other spells)
 struct SpellModifier
 {
     SpellModOp   op   : 8;
@@ -822,7 +820,7 @@ class MANGOS_DLL_SPEC PlayerTaxi
         void AppendTaximaskTo(ByteBuffer& data,bool all);
 
         // Destinations
-        bool LoadTaxiDestinationsFromString(const std::string& values);
+        bool LoadTaxiDestinationsFromString(const std::string& values, uint32 team);
         std::string SaveTaxiDestinationsToString();
 
         void ClearTaxiDestinations() { m_TaxiDestinations.clear(); }
@@ -911,7 +909,8 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         PlayerTaxi m_taxi;
         void InitTaxiNodesForLevel() { m_taxi.InitTaxiNodesForLevel(getRace(),getLevel()); }
-        bool ActivateTaxiPathTo(std::vector<uint32> const& nodes, uint32 mount_id = 0 , Creature* npc = NULL);
+        bool ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc = NULL, uint32 spellid = 0);
+        bool ActivateTaxiPathTo(uint32 taxi_path_id, uint32 spellid = 0);
                                                             // mount_id can be used in scripting calls
         bool isAcceptTickets() const { return GetSession()->GetSecurity() >= SEC_GAMEMASTER && (m_ExtraFlags & PLAYER_EXTRA_GM_ACCEPT_TICKETS); }
         void SetAcceptTicket(bool on) { if(on) m_ExtraFlags |= PLAYER_EXTRA_GM_ACCEPT_TICKETS; else m_ExtraFlags &= ~PLAYER_EXTRA_GM_ACCEPT_TICKETS; }
@@ -929,6 +928,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         void GiveXP(uint32 xp, Unit* victim);
         void GiveLevel(uint32 level);
+
         void InitStatsForLevel(bool reapplyMods = false);
 
         // Played Time Stuff
@@ -1003,7 +1003,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         static bool IsBankPos( uint8 bag, uint8 slot );
         bool IsValidPos( uint16 pos ) { return IsBankPos(pos >> 8,pos & 255); }
         bool IsValidPos( uint8 bag, uint8 slot );
-        bool HasBankBagSlot( uint8 slot ) const;
+        uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
+        void SetBankBagSlotCount(uint8 count) { SetByteValue(PLAYER_BYTES_2, 2, count); }
         bool HasItemCount( uint32 item, uint32 count, bool inBankAlso = false ) const;
         bool HasItemFitToSpellReqirements(SpellEntry const* spellInfo, Item const* ignoreItem = NULL);
         bool CanNoReagentCast(SpellEntry const* spellInfo) const;
@@ -1362,7 +1363,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         void SendProficiency(uint8 pr1, uint32 pr2);
         void SendInitialSpells();
-        bool addSpell(uint32 spell_id, bool active, bool learning = true, bool loading = false, uint16 slot_id=SPELL_WITHOUT_SLOT_ID, bool disabled = false);
+        bool addSpell(uint32 spell_id, bool active, bool learning = true, bool loading = false, bool disabled = false);
         void learnSpell(uint32 spell_id);
         void removeSpell(uint32 spell_id, bool disabled = false);
         void resetSpells();
@@ -1405,7 +1406,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void AddSpellCooldown(uint32 spell_id, uint32 itemid, time_t end_time);
         void SendCooldownEvent(SpellEntry const *spellInfo, uint32 itemId = 0, Spell* spell = NULL);
         void ProhibitSpellScholl(SpellSchoolMask idSchoolMask, uint32 unTimeMs );
-        void RemoveSpellCooldown(uint32 spell_id) { m_spellCooldowns.erase(spell_id); }
+        void RemoveSpellCooldown(uint32 spell_id, bool update = false);
         void RemoveArenaSpellCooldowns();
         void RemoveAllSpellCooldown();
         void _LoadSpellCooldowns(QueryResult *result);
@@ -1441,7 +1442,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         PvPInfo pvpInfo;
         void UpdatePvP(bool state, bool ovrride=false);
-        void UpdateZone(uint32 newZone);
+        void UpdateZone(uint32 newZone,uint32 newArea);
         void UpdateArea(uint32 newArea);
 
         void UpdateZoneDependentAuras( uint32 zone_id );    // zones
@@ -1723,7 +1724,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void UpdateEquipSpellsAtFormChange();
         void CastItemCombatSpell(Item *item,Unit* Target, WeaponAttackType attType);
 
-        void SendInitWorldStates();
+        void SendInitWorldStates(uint32 zone, uint32 area);
         void SendUpdateWorldState(uint32 Field, uint32 Value);
         void SendDirectMessage(WorldPacket *data);
 
@@ -2241,7 +2242,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         Item* _StoreItem( uint16 pos, Item *pItem, uint32 count, bool clone, bool update );
 
         void UpdateKnownCurrencies(uint32 itemId, bool apply);
-        int32 CalculateReputationGain(uint32 creatureOrQuestLevel, int32 rep, bool for_quest);
+        int32 CalculateReputationGain(uint32 creatureOrQuestLevel, int32 rep, int32 faction, bool for_quest);
         void AdjustQuestReqItemCount( Quest const* pQuest, QuestStatusData& questStatusData );
 
         GridReference<Player> m_gridRef;

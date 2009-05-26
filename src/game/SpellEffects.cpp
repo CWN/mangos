@@ -739,14 +739,7 @@ void Spell::EffectDummy(uint32 i)
                         SpellEntry const *spellInfo = sSpellStore.LookupEntry(classspell);
 
                         if (spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && (spellInfo->SpellFamilyFlags & 0x26000000860LL))
-                        {
-                            ((Player*)m_caster)->RemoveSpellCooldown(classspell);
-
-                            WorldPacket data(SMSG_CLEAR_COOLDOWN, (4+8));
-                            data << uint32(classspell);
-                            data << uint64(m_caster->GetGUID());
-                            ((Player*)m_caster)->GetSession()->SendPacket(&data);
-                        }
+                            ((Player*)m_caster)->RemoveSpellCooldown(classspell,true);
                     }
                     return;
                 }
@@ -1214,12 +1207,7 @@ void Spell::EffectDummy(uint32 i)
                             (GetSpellSchoolMask(spellInfo) & SPELL_SCHOOL_MASK_FROST) &&
                             spellInfo->Id != 11958 && GetSpellRecoveryTime(spellInfo) > 0 )
                         {
-                            ((Player*)m_caster)->RemoveSpellCooldown(classspell);
-
-                            WorldPacket data(SMSG_CLEAR_COOLDOWN, (4+8));
-                            data << uint32(classspell);
-                            data << uint64(m_caster->GetGUID());
-                            ((Player*)m_caster)->GetSession()->SendPacket(&data);
+                            ((Player*)m_caster)->RemoveSpellCooldown(classspell,true);
                         }
                     }
                     return;
@@ -1453,14 +1441,7 @@ void Spell::EffectDummy(uint32 i)
                         SpellEntry const *spellInfo = sSpellStore.LookupEntry(classspell);
 
                         if (spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && spellInfo->Id != 23989 && GetSpellRecoveryTime(spellInfo) > 0 )
-                        {
-                            ((Player*)m_caster)->RemoveSpellCooldown(classspell);
-
-                            WorldPacket data(SMSG_CLEAR_COOLDOWN, (4+8));
-                            data << uint32(classspell);
-                            data << uint64(m_caster->GetGUID());
-                            ((Player*)m_caster)->GetSession()->SendPacket(&data);
-                        }
+                            ((Player*)m_caster)->RemoveSpellCooldown(classspell,true);
                     }
                     return;
                 }
@@ -1551,17 +1532,8 @@ void Spell::EffectDummy(uint32 i)
                     // non-standard cast requirement check
                     if (!unitTarget || unitTarget->getAttackers().empty())
                     {
-                        // clear cooldown at fail
                         if(m_caster->GetTypeId()==TYPEID_PLAYER)
-                        {
-                            ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id);
-
-                            WorldPacket data(SMSG_CLEAR_COOLDOWN, (4+8));
-                            data << uint32(m_spellInfo->Id);
-                            data << uint64(m_caster->GetGUID());
-                            ((Player*)m_caster)->GetSession()->SendPacket(&data);
-                        }
-
+                            ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
                         SendCastResult(SPELL_FAILED_TARGET_AFFECTING_COMBAT);
                         return;
                     }
@@ -4038,6 +4010,9 @@ void Spell::EffectSummonPet(uint32 i)
     if(m_caster->GetTypeId() == TYPEID_PLAYER)
         NewSummon->SetUInt32Value(UNIT_FIELD_FLAGS,UNIT_FLAG_PVP_ATTACKABLE);
 
+    if(m_caster->IsPvP())
+        NewSummon->SetPvP(true);
+
     NewSummon->InitStatsForLevel(petlevel);
     NewSummon->InitPetCreateSpells();
 
@@ -5168,6 +5143,9 @@ void Spell::EffectSummonTotem(uint32 i)
     if(m_caster->GetTypeId() == TYPEID_PLAYER)
         pTotem->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_PVP_ATTACKABLE);
 
+    if(m_caster->IsPvP())
+        pTotem->SetPvP(true);
+
     pTotem->ApplySpellImmune(m_spellInfo->Id,IMMUNITY_STATE,SPELL_AURA_MOD_FEAR,true);
     pTotem->ApplySpellImmune(m_spellInfo->Id,IMMUNITY_STATE,SPELL_AURA_TRANSFORM,true);
 
@@ -5689,34 +5667,7 @@ void Spell::EffectSendTaxi(uint32 i)
     if(!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    TaxiPathEntry const* entry = sTaxiPathStore.LookupEntry(m_spellInfo->EffectMiscValue[i]);
-    if(!entry)
-        return;
-
-    std::vector<uint32> nodes;
-
-    nodes.resize(2);
-    nodes[0] = entry->from;
-    nodes[1] = entry->to;
-
-    uint32 mountid = 0;
-    switch(m_spellInfo->Id)
-    {
-        case 31606:       //Stormcrow Amulet
-            mountid = 17447;
-            break;
-        case 45071:      //Quest - Sunwell Daily - Dead Scar Bombing Run
-        case 45113:      //Quest - Sunwell Daily - Ship Bombing Run
-        case 45353:      //Quest - Sunwell Daily - Ship Bombing Run Return
-            mountid = 22840;
-            break;
-        case 34905:      //Stealth Flight
-            mountid = 6851;
-            break;
-    }
-
-    ((Player*)unitTarget)->ActivateTaxiPathTo(nodes,mountid);
-
+    ((Player*)unitTarget)->ActivateTaxiPathTo(m_spellInfo->EffectMiscValue[i],m_spellInfo->Id);
 }
 
 void Spell::EffectPlayerPull(uint32 i)
