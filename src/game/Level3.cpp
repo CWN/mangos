@@ -158,6 +158,7 @@ bool ChatHandler::HandleReloadAllItemCommand(const char*)
 {
     HandleReloadPageTextsCommand("a");
     HandleReloadItemEnchantementsCommand("a");
+    HandleReloadItemRequiredTragetCommand("a");
     return true;
 }
 
@@ -502,6 +503,14 @@ bool ChatHandler::HandleReloadItemEnchantementsCommand(const char*)
     sLog.outString( "Re-Loading Item Random Enchantments Table..." );
     LoadRandomEnchantmentsTable();
     SendGlobalSysMessage("DB table `item_enchantment_template` reloaded.");
+    return true;
+}
+
+bool ChatHandler::HandleReloadItemRequiredTragetCommand(const char*)
+{
+    sLog.outString( "Re-Loading Item Required Targets Table..." );
+    objmgr.LoadItemRequiredTarget();
+    SendGlobalSysMessage("DB table `item_required_target` reloaded.");
     return true;
 }
 
@@ -3019,7 +3028,7 @@ bool ChatHandler::HandleLookupTaxiNodeCommand(const char * args)
 bool ChatHandler::HandleGuildCreateCommand(const char* args)
 {
     if(!*args)
-        return false; 
+        return false;
 
     // if not guild name only (in "") then player name
     Player* target;
@@ -3058,7 +3067,7 @@ bool ChatHandler::HandleGuildCreateCommand(const char* args)
 bool ChatHandler::HandleGuildInviteCommand(const char *args)
 {
     if(!*args)
-        return false; 
+        return false;
 
     // if not guild name only (in "") then player name
     uint64 target_guid;
@@ -6269,8 +6278,7 @@ bool ChatHandler::HandleSendMessageCommand(const char* args)
 {
     ///- Find the player
     Player *rPlayer;
-    std::string rName;
-    if(!extractPlayerTarget((char*)args,&rPlayer,NULL,&rName))
+    if(!extractPlayerTarget((char*)args,&rPlayer))
         return false;
 
     char* msg_str = strtok(NULL, "");
@@ -6291,7 +6299,7 @@ bool ChatHandler::HandleSendMessageCommand(const char* args)
     rPlayer->GetSession()->SendAreaTriggerMessage("|cffff0000[Message from administrator]:|r");
 
     //Confirmation message
-    std::string nameLink = playerLink(rName);
+    std::string nameLink = GetNameLink(rPlayer);
     PSendSysMessage(LANG_SENDMESSAGE,nameLink.c_str(),msg_str);
     return true;
 }
