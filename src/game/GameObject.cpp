@@ -398,7 +398,10 @@ void GameObject::Update(uint32 /*p_time*/)
 
             if(GetOwnerGUID())
             {
-                m_respawnTime = 0;
+                if(Unit* owner = GetOwner())
+                    owner->RemoveGameObject(this, false);
+
+                SetRespawnTime(0);
                 Delete();
                 return;
             }
@@ -933,7 +936,7 @@ void GameObject::Use(Unit* user)
                 // fallback, will always work
                 player->TeleportTo(GetMapId(), GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation(),TELE_TO_NOT_LEAVE_TRANSPORT | TELE_TO_NOT_LEAVE_COMBAT | TELE_TO_NOT_UNSUMMON_PET);
             }
-            player->SetStandState(PLAYER_STATE_SIT_LOW_CHAIR+info->chair.height);
+            player->SetStandState(UNIT_STAND_STATE_SIT_LOW_CHAIR+info->chair.height);
             return;
         }
         //big gun, its a spell/aura
@@ -955,6 +958,9 @@ void GameObject::Use(Unit* user)
 
                 // possible quest objective for active quests
                 player->CastedCreatureOrGO(info->id, GetGUID(), 0);
+
+                if (info->goober.eventId)
+                    sWorld.ScriptsStart(sEventScripts, info->goober.eventId, player, this);
             }
 
             // cast this spell later if provided
@@ -975,6 +981,9 @@ void GameObject::Use(Unit* user)
 
             if (info->camera.cinematicId)
                 player->SendCinematicStart(info->camera.cinematicId);
+
+            if (info->camera.eventID)
+                sWorld.ScriptsStart(sEventScripts, info->camera.eventID, player, this);
 
             return;
         }

@@ -129,6 +129,7 @@ struct ActionButton
 enum ActionButtonType
 {
     ACTION_BUTTON_SPELL = 0,
+    ACTION_BUTTON_EQSET = 32,
     ACTION_BUTTON_MACRO = 64,
     ACTION_BUTTON_CMACRO= 65,
     ACTION_BUTTON_ITEM  = 128
@@ -236,14 +237,24 @@ struct EnchantDuration
 typedef std::list<EnchantDuration> EnchantDurationList;
 typedef std::list<Item*> ItemDurationList;
 
+enum LfgType
+{
+    LFG_TYPE_NONE           = 0,
+    LFG_TYPE_DUNGEON        = 1,
+    LFG_TYPE_RAID           = 2,
+    LFG_TYPE_QUEST          = 3,
+    LFG_TYPE_ZONE           = 4,
+    LFG_TYPE_HEROIC_DUNGEON = 5
+};
+
 struct LookingForGroupSlot
 {
     LookingForGroupSlot() : entry(0), type(0) {}
     bool Empty() const { return !entry && !type; }
     void Clear() { entry = 0; type = 0; }
     void Set(uint32 _entry, uint32 _type ) { entry = _entry; type = _type; }
-    bool Is(uint32 _entry, uint32 _type) const { return entry==_entry && type==_type; }
-    bool canAutoJoin() const { return entry && (type == 1 || type == 5); }
+    bool Is(uint32 _entry, uint32 _type) const { return entry == _entry && type == _type; }
+    bool canAutoJoin() const { return entry && (type == LFG_TYPE_DUNGEON || type == LFG_TYPE_HEROIC_DUNGEON); }
 
     uint32 entry;
     uint32 type;
@@ -254,11 +265,11 @@ struct LookingForGroupSlot
 struct LookingForGroup
 {
     LookingForGroup() {}
-    bool HaveInSlot(LookingForGroupSlot const& slot) const { return HaveInSlot(slot.entry,slot.type); }
+    bool HaveInSlot(LookingForGroupSlot const& slot) const { return HaveInSlot(slot.entry, slot.type); }
     bool HaveInSlot(uint32 _entry, uint32 _type) const
     {
         for(int i = 0; i < MAX_LOOKING_FOR_GROUP_SLOT; ++i)
-            if(slots[i].Is(_entry,_type))
+            if(slots[i].Is(_entry, _type))
                 return true;
         return false;
     }
@@ -300,52 +311,6 @@ enum DrunkenState
     DRUNKEN_SMASHED = 3
 };
 
-enum PlayerStateType
-{
-    /*
-        PLAYER_STATE_DANCE
-        PLAYER_STATE_SLEEP
-        PLAYER_STATE_SIT
-        PLAYER_STATE_STAND
-        PLAYER_STATE_READYUNARMED
-        PLAYER_STATE_WORK
-        PLAYER_STATE_POINT(DNR)
-        PLAYER_STATE_NONE // not used or just no state, just standing there?
-        PLAYER_STATE_STUN
-        PLAYER_STATE_DEAD
-        PLAYER_STATE_KNEEL
-        PLAYER_STATE_USESTANDING
-        PLAYER_STATE_STUN_NOSHEATHE
-        PLAYER_STATE_USESTANDING_NOSHEATHE
-        PLAYER_STATE_WORK_NOSHEATHE
-        PLAYER_STATE_SPELLPRECAST
-        PLAYER_STATE_READYRIFLE
-        PLAYER_STATE_WORK_NOSHEATHE_MINING
-        PLAYER_STATE_WORK_NOSHEATHE_CHOPWOOD
-        PLAYER_STATE_AT_EASE
-        PLAYER_STATE_READY1H
-        PLAYER_STATE_SPELLKNEELSTART
-        PLAYER_STATE_SUBMERGED
-    */
-
-    PLAYER_STATE_NONE              = 0,
-    PLAYER_STATE_SIT               = 1,
-    PLAYER_STATE_SIT_CHAIR         = 2,
-    PLAYER_STATE_SLEEP             = 3,
-    PLAYER_STATE_SIT_LOW_CHAIR     = 4,
-    PLAYER_STATE_SIT_MEDIUM_CHAIR  = 5,
-    PLAYER_STATE_SIT_HIGH_CHAIR    = 6,
-    PLAYER_STATE_DEAD              = 7,
-    PLAYER_STATE_KNEEL             = 8,
-
-    PLAYER_STATE_FORM_ALL          = 0x00FF0000,
-
-    PLAYER_STATE_FLAG_ALWAYS_STAND = 0x01,                  // byte 4
-    PLAYER_STATE_FLAG_CREEP        = 0x02000000,
-    PLAYER_STATE_FLAG_UNTRACKABLE  = 0x04000000,
-    PLAYER_STATE_FLAG_ALL          = 0xFF000000,
-};
-
 enum PlayerFlags
 {
     PLAYER_FLAGS_GROUP_LEADER   = 0x00000001,
@@ -369,48 +334,48 @@ enum PlayerFlags
 
 // used for PLAYER__FIELD_KNOWN_TITLES field (uint64), (1<<bit_index) without (-1)
 // can't use enum for uint64 values
-#define PLAYER_TITLE_DISABLED              0x0000000000000000LL
-#define PLAYER_TITLE_NONE                  0x0000000000000001LL
-#define PLAYER_TITLE_PRIVATE               0x0000000000000002LL // 1
-#define PLAYER_TITLE_CORPORAL              0x0000000000000004LL // 2
-#define PLAYER_TITLE_SERGEANT_A            0x0000000000000008LL // 3
-#define PLAYER_TITLE_MASTER_SERGEANT       0x0000000000000010LL // 4
-#define PLAYER_TITLE_SERGEANT_MAJOR        0x0000000000000020LL // 5
-#define PLAYER_TITLE_KNIGHT                0x0000000000000040LL // 6
-#define PLAYER_TITLE_KNIGHT_LIEUTENANT     0x0000000000000080LL // 7
-#define PLAYER_TITLE_KNIGHT_CAPTAIN        0x0000000000000100LL // 8
-#define PLAYER_TITLE_KNIGHT_CHAMPION       0x0000000000000200LL // 9
-#define PLAYER_TITLE_LIEUTENANT_COMMANDER  0x0000000000000400LL // 10
-#define PLAYER_TITLE_COMMANDER             0x0000000000000800LL // 11
-#define PLAYER_TITLE_MARSHAL               0x0000000000001000LL // 12
-#define PLAYER_TITLE_FIELD_MARSHAL         0x0000000000002000LL // 13
-#define PLAYER_TITLE_GRAND_MARSHAL         0x0000000000004000LL // 14
-#define PLAYER_TITLE_SCOUT                 0x0000000000008000LL // 15
-#define PLAYER_TITLE_GRUNT                 0x0000000000010000LL // 16
-#define PLAYER_TITLE_SERGEANT_H            0x0000000000020000LL // 17
-#define PLAYER_TITLE_SENIOR_SERGEANT       0x0000000000040000LL // 18
-#define PLAYER_TITLE_FIRST_SERGEANT        0x0000000000080000LL // 19
-#define PLAYER_TITLE_STONE_GUARD           0x0000000000100000LL // 20
-#define PLAYER_TITLE_BLOOD_GUARD           0x0000000000200000LL // 21
-#define PLAYER_TITLE_LEGIONNAIRE           0x0000000000400000LL // 22
-#define PLAYER_TITLE_CENTURION             0x0000000000800000LL // 23
-#define PLAYER_TITLE_CHAMPION              0x0000000001000000LL // 24
-#define PLAYER_TITLE_LIEUTENANT_GENERAL    0x0000000002000000LL // 25
-#define PLAYER_TITLE_GENERAL               0x0000000004000000LL // 26
-#define PLAYER_TITLE_WARLORD               0x0000000008000000LL // 27
-#define PLAYER_TITLE_HIGH_WARLORD          0x0000000010000000LL // 28
-#define PLAYER_TITLE_GLADIATOR             0x0000000020000000LL // 29
-#define PLAYER_TITLE_DUELIST               0x0000000040000000LL // 30
-#define PLAYER_TITLE_RIVAL                 0x0000000080000000LL // 31
-#define PLAYER_TITLE_CHALLENGER            0x0000000100000000LL // 32
-#define PLAYER_TITLE_SCARAB_LORD           0x0000000200000000LL // 33
-#define PLAYER_TITLE_CONQUEROR             0x0000000400000000LL // 34
-#define PLAYER_TITLE_JUSTICAR              0x0000000800000000LL // 35
-#define PLAYER_TITLE_CHAMPION_OF_THE_NAARU 0x0000001000000000LL // 36
-#define PLAYER_TITLE_MERCILESS_GLADIATOR   0x0000002000000000LL // 37
-#define PLAYER_TITLE_OF_THE_SHATTERED_SUN  0x0000004000000000LL // 38
-#define PLAYER_TITLE_HAND_OF_ADAL          0x0000008000000000LL // 39
-#define PLAYER_TITLE_VENGEFUL_GLADIATOR    0x0000010000000000LL // 40
+#define PLAYER_TITLE_DISABLED              UI64LIT(0x0000000000000000)
+#define PLAYER_TITLE_NONE                  UI64LIT(0x0000000000000001)
+#define PLAYER_TITLE_PRIVATE               UI64LIT(0x0000000000000002) // 1
+#define PLAYER_TITLE_CORPORAL              UI64LIT(0x0000000000000004) // 2
+#define PLAYER_TITLE_SERGEANT_A            UI64LIT(0x0000000000000008) // 3
+#define PLAYER_TITLE_MASTER_SERGEANT       UI64LIT(0x0000000000000010) // 4
+#define PLAYER_TITLE_SERGEANT_MAJOR        UI64LIT(0x0000000000000020) // 5
+#define PLAYER_TITLE_KNIGHT                UI64LIT(0x0000000000000040) // 6
+#define PLAYER_TITLE_KNIGHT_LIEUTENANT     UI64LIT(0x0000000000000080) // 7
+#define PLAYER_TITLE_KNIGHT_CAPTAIN        UI64LIT(0x0000000000000100) // 8
+#define PLAYER_TITLE_KNIGHT_CHAMPION       UI64LIT(0x0000000000000200) // 9
+#define PLAYER_TITLE_LIEUTENANT_COMMANDER  UI64LIT(0x0000000000000400) // 10
+#define PLAYER_TITLE_COMMANDER             UI64LIT(0x0000000000000800) // 11
+#define PLAYER_TITLE_MARSHAL               UI64LIT(0x0000000000001000) // 12
+#define PLAYER_TITLE_FIELD_MARSHAL         UI64LIT(0x0000000000002000) // 13
+#define PLAYER_TITLE_GRAND_MARSHAL         UI64LIT(0x0000000000004000) // 14
+#define PLAYER_TITLE_SCOUT                 UI64LIT(0x0000000000008000) // 15
+#define PLAYER_TITLE_GRUNT                 UI64LIT(0x0000000000010000) // 16
+#define PLAYER_TITLE_SERGEANT_H            UI64LIT(0x0000000000020000) // 17
+#define PLAYER_TITLE_SENIOR_SERGEANT       UI64LIT(0x0000000000040000) // 18
+#define PLAYER_TITLE_FIRST_SERGEANT        UI64LIT(0x0000000000080000) // 19
+#define PLAYER_TITLE_STONE_GUARD           UI64LIT(0x0000000000100000) // 20
+#define PLAYER_TITLE_BLOOD_GUARD           UI64LIT(0x0000000000200000) // 21
+#define PLAYER_TITLE_LEGIONNAIRE           UI64LIT(0x0000000000400000) // 22
+#define PLAYER_TITLE_CENTURION             UI64LIT(0x0000000000800000) // 23
+#define PLAYER_TITLE_CHAMPION              UI64LIT(0x0000000001000000) // 24
+#define PLAYER_TITLE_LIEUTENANT_GENERAL    UI64LIT(0x0000000002000000) // 25
+#define PLAYER_TITLE_GENERAL               UI64LIT(0x0000000004000000) // 26
+#define PLAYER_TITLE_WARLORD               UI64LIT(0x0000000008000000) // 27
+#define PLAYER_TITLE_HIGH_WARLORD          UI64LIT(0x0000000010000000) // 28
+#define PLAYER_TITLE_GLADIATOR             UI64LIT(0x0000000020000000) // 29
+#define PLAYER_TITLE_DUELIST               UI64LIT(0x0000000040000000) // 30
+#define PLAYER_TITLE_RIVAL                 UI64LIT(0x0000000080000000) // 31
+#define PLAYER_TITLE_CHALLENGER            UI64LIT(0x0000000100000000) // 32
+#define PLAYER_TITLE_SCARAB_LORD           UI64LIT(0x0000000200000000) // 33
+#define PLAYER_TITLE_CONQUEROR             UI64LIT(0x0000000400000000) // 34
+#define PLAYER_TITLE_JUSTICAR              UI64LIT(0x0000000800000000) // 35
+#define PLAYER_TITLE_CHAMPION_OF_THE_NAARU UI64LIT(0x0000001000000000) // 36
+#define PLAYER_TITLE_MERCILESS_GLADIATOR   UI64LIT(0x0000002000000000) // 37
+#define PLAYER_TITLE_OF_THE_SHATTERED_SUN  UI64LIT(0x0000004000000000) // 38
+#define PLAYER_TITLE_HAND_OF_ADAL          UI64LIT(0x0000008000000000) // 39
+#define PLAYER_TITLE_VENGEFUL_GLADIATOR    UI64LIT(0x0000010000000000) // 40
 
 // used in PLAYER_FIELD_BYTES values
 enum PlayerFieldByteFlags
@@ -508,7 +473,9 @@ enum PlayerSlots
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
-enum EquipmentSlots
+#define INVENTORY_SLOT_BAG_0    255
+
+enum EquipmentSlots                                         // 19 slots
 {
     EQUIPMENT_SLOT_START        = 0,
     EQUIPMENT_SLOT_HEAD         = 0,
@@ -533,100 +500,38 @@ enum EquipmentSlots
     EQUIPMENT_SLOT_END          = 19
 };
 
-enum InventorySlots
+enum InventorySlots                                         // 4 slots
 {
-    INVENTORY_SLOT_BAG_0        = 255,
     INVENTORY_SLOT_BAG_START    = 19,
-    INVENTORY_SLOT_BAG_1        = 19,
-    INVENTORY_SLOT_BAG_2        = 20,
-    INVENTORY_SLOT_BAG_3        = 21,
-    INVENTORY_SLOT_BAG_4        = 22,
-    INVENTORY_SLOT_BAG_END      = 23,
+    INVENTORY_SLOT_BAG_END      = 23
+};
 
+enum InventoryPackSlots                                     // 16 slots
+{
     INVENTORY_SLOT_ITEM_START   = 23,
-    INVENTORY_SLOT_ITEM_1       = 23,
-    INVENTORY_SLOT_ITEM_2       = 24,
-    INVENTORY_SLOT_ITEM_3       = 25,
-    INVENTORY_SLOT_ITEM_4       = 26,
-    INVENTORY_SLOT_ITEM_5       = 27,
-    INVENTORY_SLOT_ITEM_6       = 28,
-    INVENTORY_SLOT_ITEM_7       = 29,
-    INVENTORY_SLOT_ITEM_8       = 30,
-    INVENTORY_SLOT_ITEM_9       = 31,
-    INVENTORY_SLOT_ITEM_10      = 32,
-    INVENTORY_SLOT_ITEM_11      = 33,
-    INVENTORY_SLOT_ITEM_12      = 34,
-    INVENTORY_SLOT_ITEM_13      = 35,
-    INVENTORY_SLOT_ITEM_14      = 36,
-    INVENTORY_SLOT_ITEM_15      = 37,
-    INVENTORY_SLOT_ITEM_16      = 38,
     INVENTORY_SLOT_ITEM_END     = 39
 };
 
-enum BankSlots
+enum BankItemSlots                                          // 28 slots
 {
     BANK_SLOT_ITEM_START        = 39,
-    BANK_SLOT_ITEM_1            = 39,
-    BANK_SLOT_ITEM_2            = 40,
-    BANK_SLOT_ITEM_3            = 41,
-    BANK_SLOT_ITEM_4            = 42,
-    BANK_SLOT_ITEM_5            = 43,
-    BANK_SLOT_ITEM_6            = 44,
-    BANK_SLOT_ITEM_7            = 45,
-    BANK_SLOT_ITEM_8            = 46,
-    BANK_SLOT_ITEM_9            = 47,
-    BANK_SLOT_ITEM_10           = 48,
-    BANK_SLOT_ITEM_11           = 49,
-    BANK_SLOT_ITEM_12           = 50,
-    BANK_SLOT_ITEM_13           = 51,
-    BANK_SLOT_ITEM_14           = 52,
-    BANK_SLOT_ITEM_15           = 53,
-    BANK_SLOT_ITEM_16           = 54,
-    BANK_SLOT_ITEM_17           = 55,
-    BANK_SLOT_ITEM_18           = 56,
-    BANK_SLOT_ITEM_19           = 57,
-    BANK_SLOT_ITEM_20           = 58,
-    BANK_SLOT_ITEM_21           = 59,
-    BANK_SLOT_ITEM_22           = 60,
-    BANK_SLOT_ITEM_23           = 61,
-    BANK_SLOT_ITEM_24           = 62,
-    BANK_SLOT_ITEM_25           = 63,
-    BANK_SLOT_ITEM_26           = 64,
-    BANK_SLOT_ITEM_27           = 65,
-    BANK_SLOT_ITEM_28           = 66,
-    BANK_SLOT_ITEM_END          = 67,
+    BANK_SLOT_ITEM_END          = 67
+};
 
+enum BankBagSlots                                           // 7 slots
+{
     BANK_SLOT_BAG_START         = 67,
-    BANK_SLOT_BAG_1             = 67,
-    BANK_SLOT_BAG_2             = 68,
-    BANK_SLOT_BAG_3             = 69,
-    BANK_SLOT_BAG_4             = 70,
-    BANK_SLOT_BAG_5             = 71,
-    BANK_SLOT_BAG_6             = 72,
-    BANK_SLOT_BAG_7             = 73,
     BANK_SLOT_BAG_END           = 74
 };
 
-enum BuyBackSlots
+enum BuyBackSlots                                           // 12 slots
 {
     // stored in m_buybackitems
     BUYBACK_SLOT_START          = 74,
-    BUYBACK_SLOT_1              = 74,
-    BUYBACK_SLOT_2              = 75,
-    BUYBACK_SLOT_3              = 76,
-    BUYBACK_SLOT_4              = 77,
-    BUYBACK_SLOT_5              = 78,
-    BUYBACK_SLOT_6              = 79,
-    BUYBACK_SLOT_7              = 80,
-    BUYBACK_SLOT_8              = 81,
-    BUYBACK_SLOT_9              = 82,
-    BUYBACK_SLOT_10             = 83,
-    BUYBACK_SLOT_11             = 84,
-    BUYBACK_SLOT_12             = 85,
     BUYBACK_SLOT_END            = 86
 };
 
-enum KeyRingSlots
+enum KeyRingSlots                                           // 32 slots
 {
     KEYRING_SLOT_START          = 86,
     KEYRING_SLOT_END            = 118
@@ -695,11 +600,6 @@ struct MovementInfo
         x = y = z = o = t_x = t_y = t_z = t_o = s_pitch = j_unk = j_sinAngle = j_cosAngle = j_xyspeed = u_unk1 = 0.0f;
         t_guid = 0;
     }
-
-    /*void SetMovementFlags(uint32 _flags)
-    {
-        flags = _flags;
-    }*/
 };
 
 // flags that use in movement check for example at spell casting
@@ -984,7 +884,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         /*********************************************************/
 
         void SetVirtualItemSlot( uint8 i, Item* item);
-        void SetSheath( uint32 sheathed );
+        void SetSheath( SheathState sheathed );             // overwrite Unit version
         uint8 FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap ) const;
         uint32 GetItemCount( uint32 item, bool inBankAlso = false, Item* skipItem = NULL ) const;
         Item* GetItemByGuid( uint64 guid ) const;
@@ -1309,7 +1209,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void ClearComboPoints();
         void SendComboPoints();
 
-        void SendMailResult(uint32 mailId, uint32 mailAction, uint32 mailError, uint32 equipError = 0, uint32 item_guid = 0, uint32 item_count = 0);
+        void SendMailResult(uint32 mailId, MailResponseType mailAction, MailResponseResult mailError, uint32 equipError = 0, uint32 item_guid = 0, uint32 item_count = 0);
         void SendNewMail();
         void UpdateNextMailTimeAndUnreads();
         void AddNewMailDeliverTime(time_t deliver_time);
@@ -1377,9 +1277,11 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint32 resetTalentsCost() const;
         void InitTalentForLevel();
 
-        uint32 GetFreePrimaryProffesionPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS2); }
-        void SetFreePrimaryProffesions(uint16 profs) { SetUInt32Value(PLAYER_CHARACTER_POINTS2,profs); }
-        void InitPrimaryProffesions();
+        void LearnTalent(uint32 talentId, uint32 talentRank);
+
+        uint32 GetFreePrimaryProfessionPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS2); }
+        void SetFreePrimaryProfessions(uint16 profs) { SetUInt32Value(PLAYER_CHARACTER_POINTS2, profs); }
+        void InitPrimaryProfessions();
 
         PlayerSpellMap const& GetSpellMap() const { return m_spells; }
         PlayerSpellMap      & GetSpellMap()       { return m_spells; }

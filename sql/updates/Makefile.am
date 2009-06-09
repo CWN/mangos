@@ -73,6 +73,12 @@ pkgdata_DATA = \
 	037_7893_01_mangos_command.sql \
 	038_7886_01_mangos_petcreateinfo_spell.sql \
 	039_7896_01_mangos_creature_template.sql \
+	040_7902_01_mangos_pool_creature.sql \
+	040_7902_02_mangos_pool_gameobject.sql \
+	041_7932_01_characters_character_pet.sql \
+	042_7938_01_realmd_account.sql \
+	043_7945_01_mangos_quest_template.sql \
+	044_7980_01_mangos_item_required_target.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -125,4 +131,10 @@ EXTRA_DIST = \
 	037_7893_01_mangos_command.sql \
 	038_7886_01_mangos_petcreateinfo_spell.sql \
 	039_7896_01_mangos_creature_template.sql \
+	040_7902_01_mangos_pool_creature.sql \
+	040_7902_02_mangos_pool_gameobject.sql \
+	041_7932_01_characters_character_pet.sql \
+	042_7938_01_realmd_account.sql \
+	043_7945_01_mangos_quest_template.sql \
+	044_7980_01_mangos_item_required_target.sql \
 	README

@@ -79,7 +79,7 @@ enum PetSpellType
 
 struct PetSpell
 {
-    uint16 active;
+    uint16 active;                                          // use instead enum (not good use *uint16* limited enum in case when value in enum not possitive in *int16*)
 
     PetSpellState state : 8;
     PetSpellType type   : 8;
@@ -217,9 +217,11 @@ class Pet : public Creature
         void _LoadSpells();
         void _SaveSpells();
 
-        bool addSpell(uint32 spell_id,uint16 active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, PetSpellType type = PETSPELL_NORMAL);
+        bool addSpell(uint32 spell_id,ActiveStates active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, PetSpellType type = PETSPELL_NORMAL);
         bool learnSpell(uint32 spell_id);
-        void removeSpell(uint32 spell_id);
+        bool unlearnSpell(uint32 spell_id, bool learn_prev, bool clear_ab = true);
+        bool removeSpell(uint32 spell_id, bool learn_prev, bool clear_ab = true);
+        void CleanupActionBar();
 
         PetSpellMap     m_spells;
         TeachSpellMap   m_teachspells;
@@ -254,6 +256,7 @@ class Pet : public Creature
         int32   m_loyaltyPoints;
         int32   m_bonusdamage;
         uint64  m_auraUpdateMask;
+        bool    m_loading;
 
         DeclinedName *m_declinedname;
 

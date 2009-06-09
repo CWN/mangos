@@ -640,6 +640,15 @@ void ObjectMgr::LoadCreatureAddons()
         if(!addon)
             continue;
 
+        if (addon->mount)
+        {
+            if (!sCreatureDisplayInfoStore.LookupEntry(addon->mount))
+                sLog.outErrorDb("Creature (Entry %u) have invalid displayInfoId for mount (%u) defined in `creature_template_addon`.",addon->guidOrEntry, addon->mount);
+        }
+
+        if (!sEmotesStore.LookupEntry(addon->emote))
+            sLog.outErrorDb("Creature (Entry %u) have invalid emote (%u) defined in `creature_template_addon`.",addon->guidOrEntry, addon->emote);
+
         ConvertCreatureAddonAuras(const_cast<CreatureDataAddon*>(addon), "creature_template_addon", "Entry");
 
         if(!sCreatureStorage.LookupEntry<CreatureInfo>(addon->guidOrEntry))
@@ -657,6 +666,15 @@ void ObjectMgr::LoadCreatureAddons()
         CreatureDataAddon const* addon = sCreatureDataAddonStorage.LookupEntry<CreatureDataAddon>(i);
         if(!addon)
             continue;
+
+        if (addon->mount)
+        {
+            if (!sCreatureDisplayInfoStore.LookupEntry(addon->mount))
+                sLog.outErrorDb("Creature (GUID %u) have invalid displayInfoId for mount (%u) defined in `creature_addon`.",addon->guidOrEntry, addon->mount);
+        }
+
+        if (!sEmotesStore.LookupEntry(addon->emote))
+            sLog.outErrorDb("Creature (GUID %u) have invalid emote (%u) defined in `creature_addon`.",addon->guidOrEntry, addon->emote);
 
         ConvertCreatureAddonAuras(const_cast<CreatureDataAddon*>(addon), "creature_addon", "GUIDLow");
 
@@ -1595,9 +1613,106 @@ void ObjectMgr::LoadItemPrototypes()
             const_cast<ItemPrototype*>(proto)->FoodType = 0;
         }
     }
+}
 
-    // this DBC used currently only for check item templates in DB.
-    sItemStore.Clear();
+void ObjectMgr::LoadItemRequiredTarget()
+{
+    m_ItemRequiredTarget.clear();                           // needed for reload case
+
+    uint32 count = 0;
+
+    QueryResult *result = WorldDatabase.Query("SELECT entry,type,targetEntry FROM item_required_target");
+
+    if (!result)
+    {
+        barGoLink bar(1);
+
+        bar.step();
+
+        sLog.outString();
+        sLog.outErrorDb(">> Loaded 0 ItemRequiredTarget. DB table `item_required_target` is empty.");
+        return;
+    }
+
+    barGoLink bar(result->GetRowCount());
+
+    do
+    {
+        Field *fields = result->Fetch();
+        bar.step();
+
+        uint32 uiItemId      = fields[0].GetUInt32();
+        uint32 uiType        = fields[1].GetUInt32();
+        uint32 uiTargetEntry = fields[2].GetUInt32();
+
+        ItemPrototype const* pItemProto = sItemStorage.LookupEntry<ItemPrototype>(uiItemId);
+
+        if (!pItemProto)
+        {
+            sLog.outErrorDb("Table `item_required_target`: Entry %u listed for TargetEntry %u does not exist in `item_template`.",uiItemId,uiTargetEntry);
+            continue;
+        }
+
+        bool bIsItemSpellValid = false;
+
+        for(int i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+        {
+            if (SpellEntry const* pSpellInfo = sSpellStore.LookupEntry(pItemProto->Spells[i].SpellId))
+            {
+                if (pItemProto->Spells[i].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE ||
+                    pItemProto->Spells[i].SpellTrigger == ITEM_SPELLTRIGGER_ON_NO_DELAY_USE)
+                {
+                    SpellScriptTarget::const_iterator lower = spellmgr.GetBeginSpellScriptTarget(pSpellInfo->Id);
+                    SpellScriptTarget::const_iterator upper = spellmgr.GetEndSpellScriptTarget(pSpellInfo->Id);
+
+                    if (lower != upper)
+                        break;
+
+                    if (pSpellInfo->EffectImplicitTargetA[i] == TARGET_CHAIN_DAMAGE ||
+                        pSpellInfo->EffectImplicitTargetB[i] == TARGET_CHAIN_DAMAGE ||
+                        pSpellInfo->EffectImplicitTargetA[i] == TARGET_DUELVSPLAYER ||
+                        pSpellInfo->EffectImplicitTargetB[i] == TARGET_DUELVSPLAYER)
+                    {
+                        bIsItemSpellValid = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!bIsItemSpellValid)
+        {
+            sLog.outErrorDb("Table `item_required_target`: Spell used by item %u does not have implicit target TARGET_CHAIN_DAMAGE(6), TARGET_DUELVSPLAYER(25), already listed in `spell_script_target` or doesn't have item spelltrigger.",uiItemId);
+            continue;
+        }
+
+        if (!uiType || uiType > MAX_ITEM_REQ_TARGET_TYPE)
+        {
+            sLog.outErrorDb("Table `item_required_target`: Type %u for TargetEntry %u is incorrect.",uiType,uiTargetEntry);
+            continue;
+        }
+
+        if (!uiTargetEntry)
+        {
+            sLog.outErrorDb("Table `item_required_target`: TargetEntry == 0 for Type (%u).",uiType);
+            continue;
+        }
+
+        if (!sCreatureStorage.LookupEntry<CreatureInfo>(uiTargetEntry))
+        {
+            sLog.outErrorDb("Table `item_required_target`: creature template entry %u does not exist.",uiTargetEntry);
+            continue;
+        }
+
+        m_ItemRequiredTarget.insert(ItemRequiredTargetMap::value_type(uiItemId,ItemRequiredTarget(ItemRequiredTargetType(uiType),uiTargetEntry)));
+
+        ++count;
+    } while (result->NextRow());
+
+    delete result;
+
+    sLog.outString();
+    sLog.outString(">> Loaded %u Item required targets", count);
 }
 
 void ObjectMgr::LoadPetLevelInfo()
@@ -2572,11 +2687,15 @@ void ObjectMgr::LoadQuests()
         "RewItemId1, RewItemId2, RewItemId3, RewItemId4, RewItemCount1, RewItemCount2, RewItemCount3, RewItemCount4,"
     //   89              90              91              92              93              94            95            96            97            98
         "RewRepFaction1, RewRepFaction2, RewRepFaction3, RewRepFaction4, RewRepFaction5, RewRepValue1, RewRepValue2, RewRepValue3, RewRepValue4, RewRepValue5,"
-    //   99                 100            101               102       103           104                105               106         107     108    109
+    //   99                 100            101               102       103           104                105               106         107     108     109
         "RewHonorableKills, RewOrReqMoney, RewMoneyMaxLevel, RewSpell, RewSpellCast, RewMailTemplateId, RewMailDelaySecs, PointMapId, PointX, PointY, PointOpt,"
-    //   110            111            112           113              114            115                116                117                118             119
-        "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4,IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
-    //   120          121
+    //   110            111            112            113            114                 115                 116                 117
+        "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4, DetailsEmoteDelay1, DetailsEmoteDelay2, DetailsEmoteDelay3, DetailsEmoteDelay4,"
+    //   118              119            120                121                122                123
+        "IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
+    //   124                     125                     126                     127
+        "OfferRewardEmoteDelay1, OfferRewardEmoteDelay2, OfferRewardEmoteDelay3, OfferRewardEmoteDelay4,"
+    //   128          129
         "StartScript, CompleteScript"
         " FROM quest_template");
     if(result == NULL)
@@ -3448,6 +3567,23 @@ void ObjectMgr::LoadPetCreateSpells()
 
     delete result;
 
+    // cache spell->learn spell map for use in next loop
+    std::map<uint32,uint32> learnCache;
+    for(uint32 spell_id = 1; spell_id < sSpellStore.GetNumRows(); ++spell_id)
+    {
+        SpellEntry const *spellproto = sSpellStore.LookupEntry(spell_id);
+        if(!spellproto)
+            continue;
+
+        if(spellproto->Effect[0] != SPELL_EFFECT_LEARN_SPELL && spellproto->Effect[0] != SPELL_EFFECT_LEARN_PET_SPELL)
+            continue;
+
+        if(!spellproto->EffectTriggerSpell[0])
+            continue;
+
+        learnCache[spellproto->EffectTriggerSpell[0]] = spellproto->Id;
+    }
+
     // fill data from DBC as more correct source if available
     uint32 dcount = 0;
     for(uint32 cr_id = 1; cr_id < sCreatureStorage.MaxEntry; ++cr_id)
@@ -3462,7 +3598,18 @@ void ObjectMgr::LoadPetCreateSpells()
 
         PetCreateSpellEntry PetCreateSpell;
         for(int i = 0; i < MAX_CREATURE_SPELL_DATA_SLOT; ++i)
-            PetCreateSpell.spellid[i] = petSpellEntry->spellId[i];
+        {
+            uint32 petspell_id = petSpellEntry->spellId[i];
+            if(petspell_id)
+            {
+                // in dbc stored spell for pet use, but for teaching work we need learn spell ids
+                std::map<uint32,uint32>::const_iterator cache_itr = learnCache.find(petspell_id);
+                if(cache_itr != learnCache.end())
+                    petspell_id = cache_itr->second;
+            }
+
+            PetCreateSpell.spellid[i] = petspell_id;
+        }
 
         mPetCreateSpell[cr_id] = PetCreateSpell;
         ++dcount;
@@ -3811,13 +3958,16 @@ void ObjectMgr::LoadEventScripts()
             switch(goInfo->type)
             {
                 case GAMEOBJECT_TYPE_GOOBER:
-                    if(goInfo->goober.eventId)
+                    if (goInfo->goober.eventId)
                         evt_scripts.insert(goInfo->goober.eventId);
                     break;
                 case GAMEOBJECT_TYPE_CHEST:
-                    if(goInfo->chest.eventId)
+                    if (goInfo->chest.eventId)
                         evt_scripts.insert(goInfo->chest.eventId);
                     break;
+                case GAMEOBJECT_TYPE_CAMERA:
+                    if (goInfo->camera.eventID)
+                        evt_scripts.insert(goInfo->camera.eventID);
                 default:
                     break;
             }
@@ -3844,7 +3994,8 @@ void ObjectMgr::LoadEventScripts()
     {
         std::set<uint32>::const_iterator itr2 = evt_scripts.find(itr->first);
         if (itr2 == evt_scripts.end())
-            sLog.outErrorDb("Table `event_scripts` has script (Id: %u) not referring to any gameobject_template type 10 data2 field or type 3 data6 field or any spell effect %u", itr->first, SPELL_EFFECT_SEND_EVENT);
+            sLog.outErrorDb("Table `event_scripts` has script (Id: %u) not referring to any gameobject_template type 10 data2 field, type 3 data6 field, type 13 data 2 field or any spell effect %u",
+                itr->first, SPELL_EFFECT_SEND_EVENT);
     }
 }
 
@@ -4177,9 +4328,9 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
     sLog.outDebug("Returning mails current time: hour: %d, minute: %d, second: %d ", localtime(&basetime)->tm_hour, localtime(&basetime)->tm_min, localtime(&basetime)->tm_sec);
     //delete all old mails without item and without body immediately, if starting server
     if (!serverUp)
-        CharacterDatabase.PExecute("DELETE FROM mail WHERE expire_time < '" I64FMTD "' AND has_items = '0' AND itemTextId = 0", (uint64)basetime);
+        CharacterDatabase.PExecute("DELETE FROM mail WHERE expire_time < '" UI64FMTD "' AND has_items = '0' AND itemTextId = 0", (uint64)basetime);
     //                                                     0  1           2      3        4          5         6           7   8       9
-    QueryResult* result = CharacterDatabase.PQuery("SELECT id,messageType,sender,receiver,itemTextId,has_items,expire_time,cod,checked,mailTemplateId FROM mail WHERE expire_time < '" I64FMTD "'", (uint64)basetime);
+    QueryResult* result = CharacterDatabase.PQuery("SELECT id,messageType,sender,receiver,itemTextId,has_items,expire_time,cod,checked,mailTemplateId FROM mail WHERE expire_time < '" UI64FMTD "'", (uint64)basetime);
     if ( !result )
     {
         barGoLink bar(1);
@@ -4254,7 +4405,7 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
             else
             {
                 //mail will be returned:
-                CharacterDatabase.PExecute("UPDATE mail SET sender = '%u', receiver = '%u', expire_time = '" I64FMTD "', deliver_time = '" I64FMTD "',cod = '0', checked = '%u' WHERE id = '%u'", m->receiver, m->sender, (uint64)(basetime + 30*DAY), (uint64)basetime, MAIL_CHECK_MASK_RETURNED, m->messageID);
+                CharacterDatabase.PExecute("UPDATE mail SET sender = '%u', receiver = '%u', expire_time = '" UI64FMTD "', deliver_time = '" UI64FMTD "',cod = '0', checked = '%u' WHERE id = '%u'", m->receiver, m->sender, (uint64)(basetime + 30*DAY), (uint64)basetime, MAIL_CHECK_MASK_RETURNED, m->messageID);
                 delete m;
                 continue;
             }
@@ -5267,11 +5418,11 @@ inline void CheckGOSpellId(GameObjectInfo const* goInfo,uint32 dataN,uint32 N)
 
 inline void CheckAndFixGOChairHeightId(GameObjectInfo const* goInfo,uint32 const& dataN,uint32 N)
 {
-    if (dataN <= (PLAYER_STATE_SIT_HIGH_CHAIR-PLAYER_STATE_SIT_LOW_CHAIR) )
+    if (dataN <= (UNIT_STAND_STATE_SIT_HIGH_CHAIR-UNIT_STAND_STATE_SIT_LOW_CHAIR) )
         return;
 
     sLog.outErrorDb("Gameobject (Entry: %u GoType: %u) have data%d=%u but correct chair height in range 0..%i.",
-        goInfo->id,goInfo->type,N,dataN,PLAYER_STATE_SIT_HIGH_CHAIR-PLAYER_STATE_SIT_LOW_CHAIR);
+        goInfo->id,goInfo->type,N,dataN,UNIT_STAND_STATE_SIT_HIGH_CHAIR-UNIT_STAND_STATE_SIT_LOW_CHAIR);
 
     // prevent client and server unexpected work
     const_cast<uint32&>(dataN) = 0;
@@ -5750,7 +5901,7 @@ void ObjectMgr::SaveCreatureRespawnTime(uint32 loguid, uint32 instance, time_t t
     mCreatureRespawnTimes[MAKE_PAIR64(loguid,instance)] = t;
     WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u' AND instance = '%u'", loguid, instance);
     if(t)
-        WorldDatabase.PExecute("INSERT INTO creature_respawn VALUES ( '%u', '" I64FMTD "', '%u' )", loguid, uint64(t), instance);
+        WorldDatabase.PExecute("INSERT INTO creature_respawn VALUES ( '%u', '" UI64FMTD "', '%u' )", loguid, uint64(t), instance);
 }
 
 void ObjectMgr::DeleteCreatureData(uint32 guid)
@@ -5768,7 +5919,7 @@ void ObjectMgr::SaveGORespawnTime(uint32 loguid, uint32 instance, time_t t)
     mGORespawnTimes[MAKE_PAIR64(loguid,instance)] = t;
     WorldDatabase.PExecute("DELETE FROM gameobject_respawn WHERE guid = '%u' AND instance = '%u'", loguid, instance);
     if(t)
-        WorldDatabase.PExecute("INSERT INTO gameobject_respawn VALUES ( '%u', '" I64FMTD "', '%u' )", loguid, uint64(t), instance);
+        WorldDatabase.PExecute("INSERT INTO gameobject_respawn VALUES ( '%u', '" UI64FMTD "', '%u' )", loguid, uint64(t), instance);
 }
 
 void ObjectMgr::DeleteRespawnTimeForInstance(uint32 instance)
