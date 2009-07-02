@@ -34,6 +34,7 @@
 #include "World.h"
 #include "ObjectAccessor.h"
 #include "BattleGroundMgr.h"
+#include "MapManager.h"
 #include "SocialMgr.h"
 
 /// WorldSession constructor
@@ -365,6 +366,14 @@ void WorldSession::LogoutPlayer(bool Save)
         if(_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket)
             _player->RemoveFromGroup();
 
+        ///- Send update to group
+        if(_player->GetGroup())
+            _player->GetGroup()->SendUpdate();
+
+        ///- Broadcast a logout message to the player's friends
+        sSocialMgr.SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUIDLow(), true);
+        sSocialMgr.RemovePlayerSocial (_player->GetGUIDLow ());
+
         ///- Remove the player from the world
         // the player may not be in the world when logging out
         // e.g if he got disconnected during a transfer to another map
@@ -373,17 +382,9 @@ void WorldSession::LogoutPlayer(bool Save)
         // RemoveFromWorld does cleanup that requires the player to be in the accessor
         ObjectAccessor::Instance().RemoveObject(_player);
 
-        ///- Send update to group
-        if(_player->GetGroup())
-            _player->GetGroup()->SendUpdate();
-
-        ///- Broadcast a logout message to the player's friends
-        sSocialMgr.SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUIDLow(), true);
-
         ///- Delete the player object
         _player->CleanupsBeforeDelete();                    // do some cleanup before deleting to prevent crash at crossreferences to already deleted data
 
-        sSocialMgr.RemovePlayerSocial (_player->GetGUIDLow ());
         delete _player;
         _player = NULL;
 
@@ -511,5 +512,53 @@ void WorldSession::SendAuthWaitQue(uint32 position)
         packet << uint8( AUTH_WAIT_QUEUE );
         packet << uint32 (position);
         SendPacket(&packet);
+    }
+}
+
+void WorldSession::ReadMovementInfo(WorldPacket &data, MovementInfo *mi)
+{
+    CHECK_PACKET_SIZE(data, 4+1+4+4+4+4+4);
+    data >> mi->flags;
+    data >> mi->unk1;
+    data >> mi->time;
+    data >> mi->x;
+    data >> mi->y;
+    data >> mi->z;
+    data >> mi->o;
+
+    if(mi->HasMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+8+4+4+4+4+4);
+
+        data >> mi->t_guid;
+        data >> mi->t_x;
+        data >> mi->t_y;
+        data >> mi->t_z;
+        data >> mi->t_o;
+        data >> mi->t_time;
+    }
+
+    if(mi->HasMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING2)))
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4);
+        data >> mi->s_pitch;
+    }
+
+    CHECK_PACKET_SIZE(data, data.rpos()+4);
+    data >> mi->fallTime;
+
+    if(mi->HasMovementFlag(MOVEMENTFLAG_JUMPING))
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4+4+4+4);
+        data >> mi->j_unk;
+        data >> mi->j_sinAngle;
+        data >> mi->j_cosAngle;
+        data >> mi->j_xyspeed;
+    }
+
+    if(mi->HasMovementFlag(MOVEMENTFLAG_SPLINE))
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4);
+        data >> mi->u_unk1;
     }
 }

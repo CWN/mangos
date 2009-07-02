@@ -143,6 +143,7 @@ bool ChatHandler::HandleReloadAllSpellCommand(const char*)
     HandleReloadSkillDiscoveryTemplateCommand("a");
     HandleReloadSkillExtraItemTemplateCommand("a");
     HandleReloadSpellAffectCommand("a");
+    HandleReloadSpellAreaCommand("a");
     HandleReloadSpellChainCommand("a");
     HandleReloadSpellElixirCommand("a");
     HandleReloadSpellLearnSpellCommand("a");
@@ -423,6 +424,14 @@ bool ChatHandler::HandleReloadSpellAffectCommand(const char*)
     sLog.outString( "Re-Loading SpellAffect definitions..." );
     spellmgr.LoadSpellAffects();
     SendGlobalSysMessage("DB table `spell_affect` (spell mods apply requirements) reloaded.");
+    return true;
+}
+
+bool ChatHandler::HandleReloadSpellAreaCommand(const char*)
+{
+    sLog.outString( "Re-Loading SpellArea Data..." );
+    spellmgr.LoadSpellAreas();
+    SendGlobalSysMessage("DB table `spell_area` (spell dependences from area/quest/auras state) reloaded.");
     return true;
 }
 
@@ -5861,7 +5870,7 @@ bool ChatHandler::HandleComeToMeCommand(const char *args)
 
     uint32 newFlags = atoi(newFlagStr);
 
-    caster->SetUnitMovementFlags(newFlags);
+    caster->SetMonsterMoveFlags(MonsterMovementFlags(newFlags));
 
     Player* pl = m_session->GetPlayer();
 
@@ -6324,30 +6333,27 @@ bool ChatHandler::HandleModifyGenderCommand(const char *args)
         return false;
     }
 
+    PlayerInfo const* info = objmgr.GetPlayerInfo(player->getRace(), player->getClass());
+    if(!info)
+        return false;
+
     char const* gender_str = (char*)args;
     int gender_len = strlen(gender_str);
 
-    uint32 displayId = player->GetNativeDisplayId();
-    char const* gender_full = NULL;
-    uint32 new_displayId = displayId;
     Gender gender;
 
-    if(!strncmp(gender_str,"male",gender_len))              // MALE
+    if(!strncmp(gender_str, "male", gender_len))            // MALE
     {
         if(player->getGender() == GENDER_MALE)
             return true;
 
-        gender_full = "male";
-        new_displayId = player->getRace() == RACE_BLOODELF ? displayId+1 : displayId-1;
         gender = GENDER_MALE;
     }
-    else if (!strncmp(gender_str,"female",gender_len))      // FEMALE
+    else if (!strncmp(gender_str, "female", gender_len))    // FEMALE
     {
         if(player->getGender() == GENDER_FEMALE)
             return true;
 
-        gender_full = "female";
-        new_displayId = player->getRace() == RACE_BLOODELF ? displayId-1 : displayId+1;
         gender = GENDER_FEMALE;
     }
     else
@@ -6359,14 +6365,18 @@ bool ChatHandler::HandleModifyGenderCommand(const char *args)
 
     // Set gender
     player->SetByteValue(UNIT_FIELD_BYTES_0, 2, gender);
+    player->SetByteValue(PLAYER_BYTES_3, 0, gender);
 
     // Change display ID
-    player->SetDisplayId(new_displayId);
-    player->SetNativeDisplayId(new_displayId);
+    player->SetDisplayId(gender ? info->displayId_f : info->displayId_m);
+    player->SetNativeDisplayId(gender ? info->displayId_f : info->displayId_m);
 
-    PSendSysMessage(LANG_YOU_CHANGE_GENDER, GetNameLink(player).c_str(), gender_full);
+    char const* gender_full = gender ? "female" : "male";
+
+    PSendSysMessage(LANG_YOU_CHANGE_GENDER, player->GetName(), gender_full);
+
     if (needReportToTarget(player))
-        ChatHandler(player).PSendSysMessage(LANG_YOUR_GENDER_CHANGED, gender_full,GetNameLink().c_str());
+        ChatHandler(player).PSendSysMessage(LANG_YOUR_GENDER_CHANGED, gender_full, GetNameLink().c_str());
 
     return true;
 }

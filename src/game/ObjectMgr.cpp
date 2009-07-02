@@ -408,73 +408,73 @@ void ObjectMgr::LoadCreatureTemplates()
     for(uint32 i = 1; i < sCreatureStorage.MaxEntry; ++i)
     {
         CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(i);
-        if(!cInfo)
+        if (!cInfo)
             continue;
 
-        if(cInfo->HeroicEntry)
+        if (cInfo->HeroicEntry)
         {
             CreatureInfo const* heroicInfo = GetCreatureTemplate(cInfo->HeroicEntry);
-            if(!heroicInfo)
+            if (!heroicInfo)
             {
                 sLog.outErrorDb("Creature (Entry: %u) have `heroic_entry`=%u but creature entry %u not exist.",cInfo->HeroicEntry,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(heroicEntries.find(i)!=heroicEntries.end())
+            if (heroicEntries.find(i)!=heroicEntries.end())
             {
                 sLog.outErrorDb("Creature (Entry: %u) listed as heroic but have value in `heroic_entry`.",i);
                 continue;
             }
 
-            if(heroicEntries.find(cInfo->HeroicEntry)!=heroicEntries.end())
+            if (heroicEntries.find(cInfo->HeroicEntry)!=heroicEntries.end())
             {
                 sLog.outErrorDb("Creature (Entry: %u) already listed as heroic for another entry.",cInfo->HeroicEntry);
                 continue;
             }
 
-            if(hasHeroicEntries.find(cInfo->HeroicEntry)!=hasHeroicEntries.end())
+            if (hasHeroicEntries.find(cInfo->HeroicEntry)!=hasHeroicEntries.end())
             {
                 sLog.outErrorDb("Creature (Entry: %u) have `heroic_entry`=%u but creature entry %u have heroic entry also.",i,cInfo->HeroicEntry,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(cInfo->npcflag != heroicInfo->npcflag)
+            if (cInfo->npcflag != heroicInfo->npcflag)
             {
                 sLog.outErrorDb("Creature (Entry: %u) has different `npcflag` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(cInfo->trainer_class != heroicInfo->trainer_class)
+            if (cInfo->trainer_class != heroicInfo->trainer_class)
             {
                 sLog.outErrorDb("Creature (Entry: %u) has different `trainer_class` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(cInfo->trainer_race != heroicInfo->trainer_race)
+            if (cInfo->trainer_race != heroicInfo->trainer_race)
             {
                 sLog.outErrorDb("Creature (Entry: %u) has different `trainer_race` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(cInfo->trainer_type != heroicInfo->trainer_type)
+            if (cInfo->trainer_type != heroicInfo->trainer_type)
             {
                 sLog.outErrorDb("Creature (Entry: %u) has different `trainer_type` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(cInfo->trainer_spell != heroicInfo->trainer_spell)
+            if (cInfo->trainer_spell != heroicInfo->trainer_spell)
             {
                 sLog.outErrorDb("Creature (Entry: %u) has different `trainer_spell` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
                 continue;
             }
 
-            if(heroicInfo->AIName && *heroicInfo->AIName)
+            if (heroicInfo->AIName && *heroicInfo->AIName)
             {
                 sLog.outErrorDb("Heroic mode creature (Entry: %u) has `AIName`, but in any case will used normal mode creature (Entry: %u) AIName.",cInfo->HeroicEntry,i);
                 continue;
             }
 
-            if(heroicInfo->ScriptID)
+            if (heroicInfo->ScriptID)
             {
                 sLog.outErrorDb("Heroic mode creature (Entry: %u) has `ScriptName`, but in any case will used normal mode creature (Entry: %u) ScriptName.",cInfo->HeroicEntry,i);
                 continue;
@@ -485,19 +485,82 @@ void ObjectMgr::LoadCreatureTemplates()
         }
 
         FactionTemplateEntry const* factionTemplate = sFactionTemplateStore.LookupEntry(cInfo->faction_A);
-        if(!factionTemplate)
+        if (!factionTemplate)
             sLog.outErrorDb("Creature (Entry: %u) has non-existing faction_A template (%u)", cInfo->Entry, cInfo->faction_A);
 
         factionTemplate = sFactionTemplateStore.LookupEntry(cInfo->faction_H);
-        if(!factionTemplate)
+        if (!factionTemplate)
             sLog.outErrorDb("Creature (Entry: %u) has non-existing faction_H template (%u)", cInfo->Entry, cInfo->faction_H);
 
-        CreatureModelInfo const* minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_A);
-        if (!minfo)
-            sLog.outErrorDb("Creature (Entry: %u) has non-existing modelId_A (%u)", cInfo->Entry, cInfo->DisplayID_A);
-        minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_H);
-        if (!minfo)
-            sLog.outErrorDb("Creature (Entry: %u) has non-existing modelId_H (%u)", cInfo->Entry, cInfo->DisplayID_H);
+        // used later for scale
+        CreatureDisplayInfoEntry const* displayScaleEntry = NULL;
+        
+        if (cInfo->DisplayID_A[0])
+        {
+            CreatureDisplayInfoEntry const* displayEntry = sCreatureDisplayInfoStore.LookupEntry(cInfo->DisplayID_A[0]);
+            if(!displayEntry)
+            {
+                sLog.outErrorDb("Creature (Entry: %u) has non-existing DisplayID_A id (%u), can crash client", cInfo->Entry, cInfo->DisplayID_A[0]);
+                const_cast<CreatureInfo*>(cInfo)->DisplayID_A[0] = 0;
+            }
+            else if(!displayScaleEntry)
+                displayScaleEntry = displayEntry;
+
+            CreatureModelInfo const* minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_A[0]);
+            if (!minfo)
+                sLog.outErrorDb("Creature (Entry: %u) not has model data for DisplayID_A (%u)", cInfo->Entry, cInfo->DisplayID_A[0]);
+        }
+
+        if (cInfo->DisplayID_A[1])
+        {
+            CreatureDisplayInfoEntry const* displayEntry = sCreatureDisplayInfoStore.LookupEntry(cInfo->DisplayID_A[1]);
+            if(!displayEntry)
+            {
+                sLog.outErrorDb("Creature (Entry: %u) has non-existing DisplayID_A2 id (%u), can crash client", cInfo->Entry, cInfo->DisplayID_A[1]);
+                const_cast<CreatureInfo*>(cInfo)->DisplayID_A[1] = 0;
+            }
+            else if(!displayScaleEntry)
+                displayScaleEntry = displayEntry;
+
+            CreatureModelInfo const* minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_A[1]);
+            if (!minfo)
+                sLog.outErrorDb("Creature (Entry: %u) not has model data for DisplayID_A2 (%u)", cInfo->Entry, cInfo->DisplayID_A[1]);
+        }
+
+        if (cInfo->DisplayID_H[0])
+        {
+            CreatureDisplayInfoEntry const* displayEntry = sCreatureDisplayInfoStore.LookupEntry(cInfo->DisplayID_H[0]);
+            if(!displayEntry)
+            {
+                sLog.outErrorDb("Creature (Entry: %u) has non-existing DisplayID_H id (%u), can crash client", cInfo->Entry, cInfo->DisplayID_H[0]);
+                const_cast<CreatureInfo*>(cInfo)->DisplayID_H[0] = 0;
+            }
+            else if(!displayScaleEntry)
+                displayScaleEntry = displayEntry;
+
+            CreatureModelInfo const* minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_H[0]);
+            if (!minfo)
+                sLog.outErrorDb("Creature (Entry: %u) not has model data for DisplayID_H (%u)", cInfo->Entry, cInfo->DisplayID_H[0]);
+        }
+
+        if (cInfo->DisplayID_H[1])
+        {
+            CreatureDisplayInfoEntry const* displayEntry = sCreatureDisplayInfoStore.LookupEntry(cInfo->DisplayID_H[1]);
+            if(!displayEntry)
+            {
+                sLog.outErrorDb("Creature (Entry: %u) has non-existing DisplayID_H2 id (%u), can crash client", cInfo->Entry, cInfo->DisplayID_H[1]);
+                const_cast<CreatureInfo*>(cInfo)->DisplayID_H[1] = 0;
+            }
+            else if(!displayScaleEntry)
+                displayScaleEntry = displayEntry;
+
+            CreatureModelInfo const* minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(cInfo->DisplayID_H[1]);
+            if (!minfo)
+                sLog.outErrorDb("Creature (Entry: %u) not has model data for DisplayID_H2 (%u)", cInfo->Entry, cInfo->DisplayID_H[1]);
+        }
+
+        if (!displayScaleEntry)
+            sLog.outErrorDb("Creature (Entry: %u) not has any existed display id in DisplayID_A/DisplayID_A2/DisplayID_H/DisplayID_H2", cInfo->Entry);
 
         if(cInfo->dmgschool >= MAX_SPELL_SCHOOL)
         {
@@ -545,8 +608,10 @@ void ObjectMgr::LoadCreatureTemplates()
         /// if not set custom creature scale then load scale from CreatureDisplayInfo.dbc
         if(cInfo->scale <= 0.0f)
         {
-            CreatureDisplayInfoEntry const* ScaleEntry = sCreatureDisplayInfoStore.LookupEntry(cInfo->DisplayID_A);
-            const_cast<CreatureInfo*>(cInfo)->scale = ScaleEntry ? ScaleEntry->scale : 1.0f;
+            if(displayScaleEntry)
+                const_cast<CreatureInfo*>(cInfo)->scale = displayScaleEntry->scale;
+            else
+                const_cast<CreatureInfo*>(cInfo)->scale = 1.0f;
         }
     }
 }
@@ -643,7 +708,10 @@ void ObjectMgr::LoadCreatureAddons()
         if (addon->mount)
         {
             if (!sCreatureDisplayInfoStore.LookupEntry(addon->mount))
+            {
                 sLog.outErrorDb("Creature (Entry %u) have invalid displayInfoId for mount (%u) defined in `creature_template_addon`.",addon->guidOrEntry, addon->mount);
+                const_cast<CreatureDataAddon*>(addon)->mount = 0;
+            }
         }
 
         if (!sEmotesStore.LookupEntry(addon->emote))
@@ -670,7 +738,10 @@ void ObjectMgr::LoadCreatureAddons()
         if (addon->mount)
         {
             if (!sCreatureDisplayInfoStore.LookupEntry(addon->mount))
+            {
                 sLog.outErrorDb("Creature (GUID %u) have invalid displayInfoId for mount (%u) defined in `creature_addon`.",addon->guidOrEntry, addon->mount);
+                const_cast<CreatureDataAddon*>(addon)->mount = 0;
+            }
         }
 
         if (!sEmotesStore.LookupEntry(addon->emote))
@@ -701,20 +772,36 @@ CreatureModelInfo const* ObjectMgr::GetCreatureModelInfo(uint32 modelid)
     return sCreatureModelStorage.LookupEntry<CreatureModelInfo>(modelid);
 }
 
-uint32 ObjectMgr::ChooseDisplayId(uint32 team, const CreatureInfo *cinfo, const CreatureData *data)
+uint32 ObjectMgr::ChooseDisplayId(uint32 team, const CreatureInfo *cinfo, const CreatureData *data /*= NULL*/)
 {
     // Load creature model (display id)
+    if (data && data->displayid)
+        return data->displayid;
+
+    // use defaults from the template
     uint32 display_id;
-    if (!data || data->displayid == 0)                      // use defaults from the template
+
+    // DisplayID_A is used if no team is given
+    if (team == HORDE)
     {
-        // DisplayID_A is used if no team is given
-        if (team == HORDE)
-            display_id = (cinfo->DisplayID_H2 != 0 && urand(0,1) == 0) ? cinfo->DisplayID_H2 : cinfo->DisplayID_H;
+        if(cinfo->DisplayID_H[0])
+            display_id = cinfo->DisplayID_H[1] ? cinfo->DisplayID_H[urand(0,1)] : cinfo->DisplayID_H[0];
         else
-            display_id = (cinfo->DisplayID_A2 != 0 && urand(0,1) == 0) ? cinfo->DisplayID_A2 : cinfo->DisplayID_A;
+            display_id = cinfo->DisplayID_H[1];
+
+        if(!display_id)
+            display_id = cinfo->DisplayID_A[0] ? cinfo->DisplayID_A[0] : cinfo->DisplayID_A[1];
     }
-    else                                                    // overridden in creature data
-        display_id = data->displayid;
+    else
+    {
+        if(cinfo->DisplayID_A[0])
+            display_id = cinfo->DisplayID_A[1] ? cinfo->DisplayID_A[urand(0,1)] : cinfo->DisplayID_A[0];
+        else
+            display_id = cinfo->DisplayID_A[1];
+
+        if(!display_id)
+            display_id = cinfo->DisplayID_H[0] ? cinfo->DisplayID_H[0] : cinfo->DisplayID_H[1];
+    }
 
     return display_id;
 }
@@ -744,6 +831,29 @@ CreatureModelInfo const* ObjectMgr::GetCreatureModelRandomGender(uint32 display_
 void ObjectMgr::LoadCreatureModelInfo()
 {
     sCreatureModelStorage.Load();
+
+    // post processing
+    for(uint32 i = 1; i < sCreatureModelStorage.MaxEntry; ++i)
+    {
+        CreatureModelInfo const *minfo = sCreatureModelStorage.LookupEntry<CreatureModelInfo>(i);
+        if (!minfo)
+            continue;
+
+        if (!sCreatureDisplayInfoStore.LookupEntry(minfo->modelid))
+            sLog.outErrorDb("Table `creature_model_info` has model for not existed display id (%u).", minfo->modelid);
+
+        if (minfo->gender > GENDER_NONE)
+        {
+            sLog.outErrorDb("Table `creature_model_info` has wrong gender (%u) for display id (%u).", uint32(minfo->gender), minfo->modelid);
+            const_cast<CreatureModelInfo*>(minfo)->gender = GENDER_MALE;
+        }
+
+        if (minfo->modelid_other_gender && !sCreatureDisplayInfoStore.LookupEntry(minfo->modelid_other_gender))
+        {
+            sLog.outErrorDb("Table `creature_model_info` has not existed alt.gender model (%u) for existed display id (%u).", minfo->modelid_other_gender, minfo->modelid);
+            const_cast<CreatureModelInfo*>(minfo)->modelid_other_gender = 0;
+        }
+    }
 
     sLog.outString( ">> Loaded %u creature model based info", sCreatureModelStorage.RecordCount );
     sLog.outString();
@@ -953,6 +1063,12 @@ void ObjectMgr::LoadGameobjects()
         if(!gInfo)
         {
             sLog.outErrorDb("Table `gameobject` has gameobject (GUID: %u) with non existing gameobject entry %u, skipped.", guid, entry);
+            continue;
+        }
+
+        if(gInfo->displayId && !sGameObjectDisplayInfoStore.LookupEntry(gInfo->displayId))
+        {
+            sLog.outErrorDb("Gameobject (GUID: %u Entry %u GoType: %u) have invalid displayId (%u), not loaded.",guid, entry, gInfo->type, gInfo->displayId);
             continue;
         }
 
@@ -1423,6 +1539,12 @@ void ObjectMgr::LoadItemPrototypes()
             const_cast<ItemPrototype*>(proto)->Stackable = 255;
         }
 
+        if(proto->ContainerSlots > MAX_BAG_SIZE)
+        {
+            sLog.outErrorDb("Item (Entry: %u) has too large value in ContainerSlots (%u), replace by hardcoded limit (%u).",i,proto->ContainerSlots,MAX_BAG_SIZE);
+            const_cast<ItemPrototype*>(proto)->ContainerSlots = MAX_BAG_SIZE;
+        }
+
         for (int j = 0; j < MAX_ITEM_PROTO_STATS; ++j)
         {
             // for ItemStatValue != 0
@@ -1510,11 +1632,17 @@ void ObjectMgr::LoadItemPrototypes()
         {
             for (int j = 0; j < MAX_ITEM_PROTO_SPELLS; ++j)
             {
-                if(proto->Spells[j].SpellTrigger >= MAX_ITEM_SPELLTRIGGER || proto->Spells[j].SpellTrigger == ITEM_SPELLTRIGGER_LEARN_SPELL_ID)
+                if (proto->Spells[j].SpellTrigger >= MAX_ITEM_SPELLTRIGGER || proto->Spells[j].SpellTrigger == ITEM_SPELLTRIGGER_LEARN_SPELL_ID)
                 {
                     sLog.outErrorDb("Item (Entry: %u) has wrong item spell trigger value in spelltrigger_%d (%u)",i,j+1,proto->Spells[j].SpellTrigger);
                     const_cast<ItemPrototype*>(proto)->Spells[j].SpellId = 0;
                     const_cast<ItemPrototype*>(proto)->Spells[j].SpellTrigger = ITEM_SPELLTRIGGER_ON_USE;
+                }
+                // on hit can be sued only at weapon
+                else if (proto->Spells[j].SpellTrigger == ITEM_SPELLTRIGGER_CHANCE_ON_HIT)
+                {
+                    if(proto->Class != ITEM_CLASS_WEAPON)
+                        sLog.outErrorDb("Item (Entry: %u) isn't weapon (Class: %u) but has on hit spelltrigger_%d (%u), it will not triggered.",i,proto->Class,j+1,proto->Spells[j].SpellTrigger);
                 }
 
                 if(proto->Spells[j].SpellId)
@@ -1668,14 +1796,19 @@ void ObjectMgr::LoadItemRequiredTarget()
                     if (lower != upper)
                         break;
 
-                    if (pSpellInfo->EffectImplicitTargetA[i] == TARGET_CHAIN_DAMAGE ||
-                        pSpellInfo->EffectImplicitTargetB[i] == TARGET_CHAIN_DAMAGE ||
-                        pSpellInfo->EffectImplicitTargetA[i] == TARGET_DUELVSPLAYER ||
-                        pSpellInfo->EffectImplicitTargetB[i] == TARGET_DUELVSPLAYER)
+                    for (int j = 0; j < 3; ++j)
                     {
-                        bIsItemSpellValid = true;
-                        break;
+                        if (pSpellInfo->EffectImplicitTargetA[j] == TARGET_CHAIN_DAMAGE ||
+                            pSpellInfo->EffectImplicitTargetB[j] == TARGET_CHAIN_DAMAGE ||
+                            pSpellInfo->EffectImplicitTargetA[j] == TARGET_DUELVSPLAYER ||
+                            pSpellInfo->EffectImplicitTargetB[j] == TARGET_DUELVSPLAYER)
+                        {
+                            bIsItemSpellValid = true;
+                            break;
+                        }
                     }
+                    if (bIsItemSpellValid)
+                        break;
                 }
             }
         }
@@ -2030,7 +2163,7 @@ void ObjectMgr::LoadPlayerInfo()
                 }
 
                 PlayerInfo* pInfo = &playerInfo[current_race][current_class];
-                pInfo->spell.push_back(CreateSpellPair(fields[2].GetUInt16(), fields[3].GetUInt8()));
+                pInfo->spell.push_back(CreateSpellPair(fields[2].GetUInt32(), fields[3].GetUInt8()));
 
                 bar.step();
                 ++count;
@@ -2046,8 +2179,8 @@ void ObjectMgr::LoadPlayerInfo()
 
     // Load playercreate actions
     {
-        //                                                0     1      2       3       4     5
-        QueryResult *result = WorldDatabase.Query("SELECT race, class, button, action, type, misc FROM playercreateinfo_action");
+        //                                                0     1      2       3       4
+        QueryResult *result = WorldDatabase.Query("SELECT race, class, button, action, type FROM playercreateinfo_action");
 
         uint32 count = 0;
 
@@ -2082,10 +2215,7 @@ void ObjectMgr::LoadPlayerInfo()
                 }
 
                 PlayerInfo* pInfo = &playerInfo[current_race][current_class];
-                pInfo->action[0].push_back(fields[2].GetUInt16());
-                pInfo->action[1].push_back(fields[3].GetUInt16());
-                pInfo->action[2].push_back(fields[4].GetUInt16());
-                pInfo->action[3].push_back(fields[5].GetUInt16());
+                pInfo->action.push_back(PlayerCreateInfoAction(fields[2].GetUInt8(),fields[3].GetUInt32(),fields[4].GetUInt8()));
 
                 bar.step();
                 ++count;
@@ -3225,13 +3355,20 @@ void ObjectMgr::LoadQuests()
                 qinfo->RewSpell = 0;                        // no spell reward will display for this quest
             }
 
-            else if(!SpellMgr::IsSpellValid(spellInfo))
+            if(!SpellMgr::IsSpellValid(spellInfo))
             {
-                sLog.outErrorDb("Quest %u has `RewSpell` = %u but spell %u is broken, quest can't be done.",
+                sLog.outErrorDb("Quest %u has `RewSpell` = %u but spell %u is broken, quest will not have a spell reward.",
                     qinfo->GetQuestId(),qinfo->RewSpell,qinfo->RewSpell);
                 qinfo->RewSpell = 0;                        // no spell reward will display for this quest
             }
 
+            if(GetTalentSpellCost(qinfo->RewSpell))
+            {
+                sLog.outErrorDb("Quest %u has `RewSpell` = %u but spell %u is talent, quest will not have a spell reward.",
+                    qinfo->GetQuestId(),qinfo->RewSpell,qinfo->RewSpell);
+                qinfo->RewSpell = 0;                        // no spell reward will display for this quest
+                continue;
+            }
         }
 
         if(qinfo->RewSpellCast)
@@ -3245,13 +3382,20 @@ void ObjectMgr::LoadQuests()
                 qinfo->RewSpellCast = 0;                    // no spell will be casted on player
             }
 
-            else if(!SpellMgr::IsSpellValid(spellInfo))
+            if(!SpellMgr::IsSpellValid(spellInfo))
             {
-                sLog.outErrorDb("Quest %u has `RewSpellCast` = %u but spell %u is broken, quest can't be done.",
+                sLog.outErrorDb("Quest %u has `RewSpellCast` = %u but spell %u is broken, quest will not have a spell reward.",
                     qinfo->GetQuestId(),qinfo->RewSpellCast,qinfo->RewSpellCast);
                 qinfo->RewSpellCast = 0;                    // no spell will be casted on player
             }
 
+            if(GetTalentSpellCost(qinfo->RewSpellCast))
+            {
+                sLog.outErrorDb("Quest %u has `RewSpell` = %u but spell %u is talent, quest will not have a spell reward.",
+                    qinfo->GetQuestId(),qinfo->RewSpellCast,qinfo->RewSpellCast);
+                qinfo->RewSpellCast = 0;                    // no spell will be casted on player
+                continue;
+            }
         }
 
         if(qinfo->RewMailTemplateId)
@@ -4636,11 +4780,11 @@ void ObjectMgr::GetTaxiPath( uint32 source, uint32 destination, uint32 &path, ui
     path = dest_i->second.ID;
 }
 
-uint16 ObjectMgr::GetTaxiMount( uint32 id, uint32 team, bool allowed_alt_team /* = false */)
+uint32 ObjectMgr::GetTaxiMountDisplayId( uint32 id, uint32 team, bool allowed_alt_team /* = false */)
 {
     uint16 mount_entry = 0;
-    uint16 mount_id = 0;
 
+    // select mount creature id
     TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(id);
     if(node)
     {
@@ -4649,34 +4793,27 @@ uint16 ObjectMgr::GetTaxiMount( uint32 id, uint32 team, bool allowed_alt_team /*
             mount_entry = node->MountCreatureID[1];
             if(!mount_entry && allowed_alt_team)
                 mount_entry = node->MountCreatureID[0];
-
-            CreatureInfo const *ci = GetCreatureTemplate(mount_entry);
-            if(ci)
-                mount_id = ci->DisplayID_A;
         }
-        if (team == HORDE)
+        else if (team == HORDE)
         {
             mount_entry = node->MountCreatureID[0];
 
             if(!mount_entry && allowed_alt_team)
                 mount_entry = node->MountCreatureID[1];
-
-            CreatureInfo const *ci = GetCreatureTemplate(mount_entry);
-            if(ci)
-                mount_id = ci->DisplayID_H;
         }
     }
 
-    CreatureModelInfo const *minfo = GetCreatureModelInfo(mount_id);
-    if(!minfo)
-    {
-        sLog.outErrorDb("Taxi mount (Entry: %u) for taxi node (Id: %u) for team %u has model %u not found in table `creature_model_info`, can't load. ",
-            mount_entry,id,team,mount_id);
+    CreatureInfo const *mount_info = GetCreatureTemplate(mount_entry);
+    if (!mount_info)
+        return 0;
 
-        return false;
-    }
-    if(minfo->modelid_other_gender!=0)
-        mount_id = urand(0,1) ? mount_id : minfo->modelid_other_gender;
+    uint16 mount_id = objmgr.ChooseDisplayId(team,mount_info);
+    if (!mount_id)
+        return 0;
+
+    CreatureModelInfo const *minfo = objmgr.GetCreatureModelRandomGender(mount_id);
+    if (minfo)
+        mount_id = minfo->modelid;
 
     return mount_id;
 }
@@ -5449,6 +5586,8 @@ void ObjectMgr::LoadGameobjectInfo()
         GameObjectInfo const* goInfo = sGOStorage.LookupEntry<GameObjectInfo>(id);
         if (!goInfo)
             continue;
+
+        // some GO types have unused go template, check goInfo->displayId at GO spawn data loading or ignore
 
         switch(goInfo->type)
         {
@@ -6942,6 +7081,8 @@ void ObjectMgr::LoadTrainerSpell()
 
     barGoLink bar( result->GetRowCount() );
 
+    std::set<uint32> talentIds;
+
     uint32 count = 0;
     do
     {
@@ -6980,6 +7121,16 @@ void ObjectMgr::LoadTrainerSpell()
         if(!SpellMgr::IsSpellValid(spellinfo))
         {
             sLog.outErrorDb("Table `npc_trainer` for Trainer (Entry: %u) has broken learning spell %u, ignore", entry, spell);
+            continue;
+        }
+
+        if(GetTalentSpellCost(spell))
+        {
+            if(talentIds.count(spell)==0)
+            {
+                sLog.outErrorDb("Table `npc_trainer` has talent as learning spell %u, ignore", spell);
+                talentIds.insert(spell);
+            }
             continue;
         }
 
