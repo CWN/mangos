@@ -185,12 +185,12 @@ void WorldSession::HandleCreatureQueryOpcode( WorldPacket & recv_data )
         data << uint32(ci->rank);                           // Creature Rank (elite, boss, etc)
         data << uint32(0);                                  // unknown        wdbFeild11
         data << uint32(ci->PetSpellDataId);                 // Id from CreatureSpellData.dbc    wdbField12
-        data << uint32(ci->DisplayID_A);                    // modelid_male1
-        data << uint32(ci->DisplayID_H);                    // modelid_female1 ?
-        data << uint32(ci->DisplayID_A2);                   // modelid_male2 ?
-        data << uint32(ci->DisplayID_H2);                   // modelid_femmale2 ?
-        data << float(1.0f);                                // unk
-        data << float(1.0f);                                // unk
+        data << uint32(ci->DisplayID_A[0]);                 // modelid_male1
+        data << uint32(ci->DisplayID_H[0]);                 // modelid_female1 ?
+        data << uint32(ci->DisplayID_A[1]);                 // modelid_male2 ?
+        data << uint32(ci->DisplayID_H[1]);                 // modelid_femmale2 ?
+        data << float(ci->unk16);                           // unk
+        data << float(ci->unk17);                           // unk
         data << uint8(ci->RacialLeader);
         SendPacket( &data );
         sLog.outDebug( "WORLD: Sent SMSG_CREATURE_QUERY_RESPONSE" );
@@ -297,7 +297,7 @@ void WorldSession::HandleCorpseQueryOpcode(WorldPacket & /*recv_data*/)
             if(corpseMapEntry->IsDungeon() && corpseMapEntry->entrance_map >= 0)
             {
                 // if corpse map have entrance
-                if(Map const* entranceMap = MapManager::Instance().GetBaseMap(corpseMapEntry->entrance_map))
+                if(Map const* entranceMap = MapManager::Instance().CreateBaseMap(corpseMapEntry->entrance_map))
                 {
                     mapid = corpseMapEntry->entrance_map;
                     x = corpseMapEntry->entrance_x;

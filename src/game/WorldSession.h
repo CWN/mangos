@@ -30,6 +30,7 @@ class MailItemsInfo;
 struct ItemPrototype;
 struct AuctionEntry;
 struct DeclinedName;
+struct MovementInfo;
 
 class Creature;
 class Item;
@@ -78,6 +79,8 @@ class MANGOS_DLL_SPEC WorldSession
         bool PlayerLogout() const { return m_playerLogout; }
 
         void SizeError(WorldPacket const& packet, uint32 size) const;
+
+        void ReadMovementInfo(WorldPacket &data, MovementInfo *mi);
 
         void SendPacket(WorldPacket const* packet);
         void SendNotification(const char *format,...) ATTR_PRINTF(2,3);
@@ -172,7 +175,7 @@ class MANGOS_DLL_SPEC WorldSession
         //Taxi
         void SendTaxiStatus( uint64 guid );
         void SendTaxiMenu( Creature* unit );
-        void SendDoFlight( uint16 MountId, uint32 path, uint32 pathNode = 0 );
+        void SendDoFlight( uint32 mountDisplayId, uint32 path, uint32 pathNode = 0 );
         bool SendLearnNewTaxiNode( Creature* unit );
 
         // Guild/Arena Team
