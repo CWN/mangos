@@ -394,6 +394,18 @@ LogColors = ""
 #                   (included in client by default, with active official localization or custom localization fonts in clientdir/Fonts).
 #                 3 basic latin characters + server timezone specific
 #
+#    MinPlayerName
+#        Minimal name length (1..12)
+#        Default: 2
+#
+#    MinCharterName
+#        Minimal name length (1..24)
+#        Default: 2
+#
+#    MinPetName
+#        Minimal name length (1..12)
+#        Default: 2
+#
 #    CharactersCreatingDisabled
 #        Disable characters creating for specific team or any (non-player accounts not affected)
 #        Default: 0 - enabled
@@ -570,6 +582,9 @@ DeclinedNames = 0
 StrictPlayerNames = 0
 StrictCharterNames = 0
 StrictPetNames = 0
+MinPlayerName = 2
+MinCharterName = 2
+MinPetName = 2
 CharactersCreatingDisabled = 0
 CharactersPerAccount = 50
 CharactersPerRealm = 10
@@ -782,6 +797,19 @@ ListenRange.Yell = 300
 #        Default: 0 (disible fake messages preventing)
 #                 1 (enabled fake messages preventing)
 #
+#    ChatStrictLinkChecking.Severity
+#        Check chat messages for ingame links to spells, items, quests, achievements etc.
+#        Default: 0 (disable link checking)
+#                 1 (check if only valid pipe commands are used. This prevents posting pictures for example)
+#                 2 (verifiy that pipe commands are used in a correct order)
+#                 3 (check if color, entry and name don't contradict each other. For correct work, please assure
+#                    that you have extracted locale DBCs of every language specific client playing on this server.)
+#
+#    ChatStrictLinkChecking.Kick
+#        Defines, what should be done if a message is considered to contain invalid pipe commands.
+#        Default: 0 (silently ignore message)
+#                 1 (kick players who sent invalid formed messages)
+#
 #    ChatFlood.MessageCount
 #        Chat anti-flood protection, haste message count to activate protection
 #        Default: 10
@@ -808,6 +836,8 @@ ListenRange.Yell = 300
 ###################################################################################################################
 
 ChatFakeMessagePreventing = 0
+ChatStrictLinkChecking.Severity = 0
+ChatStrictLinkChecking.Kick = 0
 ChatFlood.MessageCount = 10
 ChatFlood.MessageDelay = 1
 ChatFlood.MuteTime = 10
@@ -847,15 +877,19 @@ Channel.SilentlyGMJoin = 0
 #                 0 (disable)
 #                 1 (enable)
 #
-#    GM.InGMList
-#        Is GM showed in GM list (if visible) in non-GM state (.gmoff)
-#        Default: 0 (false)
-#                 1 (true)
+#    GM.InGMList.Level
+#        Max GM level showed in GM list (if visible) in non-GM state (.gm off)
+#                 0 (none)
+#                 1 (only moderators)
+#                 2 (only gamemasters)
+#        Default: 3 (anyone)
 #
-#    GM.InWhoList
-#        Is GM showed in who list (if visible).
-#        Default: 0 (false)
-#                 1 (true)
+#    GM.InWhoList.Level
+#        Max GM level showed in who list (if visible).
+#                 0 (only players)
+#                 1 (only moderators)
+#                 2 (only gamemasters)
+#        Default: 3 (anyone)
 #
 #    GM.LogTrade
 #        Include GM trade and trade slot enchanting operations in GM log if it enable
@@ -878,8 +912,8 @@ GM.Visible               = 2
 GM.AcceptTickets         = 2
 GM.Chat                  = 2
 GM.WhisperingTo          = 2
-GM.InGMList              = 0
-GM.InWhoList             = 0
+GM.InGMList.Level        = 3
+GM.InWhoList.Level       = 3
 GM.LogTrade              = 1
 GM.StartLevel            = 1
 GM.LowerSecurity         = 0
@@ -1148,6 +1182,8 @@ Arena.MaxRatingDifference = 0
 Arena.RatingDiscardTimer = 60000
 Arena.AutoDistributePoints = 0
 Arena.AutoDistributeInterval = 7
+Arena.ArenaSeason.ID = 1
+Arena.ArenaSeason.InProgress = 1
 
 ###################################################################################################################
 #

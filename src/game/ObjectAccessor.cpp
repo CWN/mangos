@@ -43,7 +43,11 @@ INSTANTIATE_SINGLETON_2(ObjectAccessor, CLASS_LOCK);
 INSTANTIATE_CLASS_MUTEX(ObjectAccessor, ACE_Thread_Mutex);
 
 ObjectAccessor::ObjectAccessor() {}
-ObjectAccessor::~ObjectAccessor() {}
+ObjectAccessor::~ObjectAccessor()
+{
+    for(Player2CorpsesMapType::const_iterator itr = i_player2corpse.begin(); itr != i_player2corpse.end(); ++itr)
+        delete itr->second;
+}
 
 Creature*
 ObjectAccessor::GetCreatureOrPet(WorldObject const &u, uint64 guid)
@@ -82,38 +86,56 @@ ObjectAccessor::GetCorpse(WorldObject const &u, uint64 guid)
     return ret;
 }
 
+WorldObject* ObjectAccessor::GetWorldObject(WorldObject const &p, uint64 guid)
+{
+    switch(GUID_HIPART(guid))
+    {
+        case HIGHGUID_PLAYER:       return FindPlayer(guid);
+        case HIGHGUID_GAMEOBJECT:   return p.GetMap()->GetGameObject(guid);
+        case HIGHGUID_UNIT:         return p.GetMap()->GetCreature(guid);
+        case HIGHGUID_PET:          return GetPet(guid);
+        case HIGHGUID_DYNAMICOBJECT:return p.GetMap()->GetDynamicObject(guid);
+        case HIGHGUID_TRANSPORT:    return NULL;
+        case HIGHGUID_CORPSE:       return GetCorpse(p,guid);
+        case HIGHGUID_MO_TRANSPORT: return NULL;
+        default: break;
+    }
+
+    return NULL;
+}
+
 Object* ObjectAccessor::GetObjectByTypeMask(WorldObject const &p, uint64 guid, uint32 typemask)
 {
-    Object *obj = NULL;
-
-    if(typemask & TYPEMASK_PLAYER)
+    switch(GUID_HIPART(guid))
     {
-        obj = FindPlayer(guid);
-        if(obj) return obj;
-    }
-
-    if(typemask & TYPEMASK_UNIT)
-    {
-        obj = GetCreatureOrPet(p,guid);
-        if(obj) return obj;
-    }
-
-    if(typemask & TYPEMASK_GAMEOBJECT)
-    {
-        obj = p.GetMap()->GetGameObject(guid);
-        if(obj) return obj;
-    }
-
-    if(typemask & TYPEMASK_DYNAMICOBJECT)
-    {
-        obj = p.GetMap()->GetDynamicObject(guid);
-        if(obj) return obj;
-    }
-
-    if(typemask & TYPEMASK_ITEM && p.GetTypeId() == TYPEID_PLAYER)
-    {
-        obj = ((Player const &)p).GetItemByGuid( guid );
-        if(obj) return obj;
+        case HIGHGUID_ITEM:
+            if(typemask & TYPEMASK_ITEM && p.GetTypeId() == TYPEID_PLAYER)
+                return ((Player const &)p).GetItemByGuid( guid );
+            break;
+        case HIGHGUID_PLAYER:
+            if(typemask & TYPEMASK_PLAYER)
+                return FindPlayer(guid);
+            break;
+        case HIGHGUID_GAMEOBJECT:
+            if(typemask & TYPEMASK_GAMEOBJECT)
+                return p.GetMap()->GetGameObject(guid);
+            break;
+        case HIGHGUID_UNIT:
+            if(typemask & TYPEMASK_UNIT)
+                return p.GetMap()->GetCreature(guid);
+            break;
+        case HIGHGUID_PET:
+            if(typemask & TYPEMASK_UNIT)
+                return GetPet(guid);
+            break;
+        case HIGHGUID_DYNAMICOBJECT:
+            if(typemask & TYPEMASK_DYNAMICOBJECT)
+                return p.GetMap()->GetDynamicObject(guid);
+            break;
+        case HIGHGUID_TRANSPORT:
+        case HIGHGUID_CORPSE:
+        case HIGHGUID_MO_TRANSPORT:
+            break;
     }
 
     return NULL;
@@ -307,7 +329,7 @@ ObjectAccessor::ConvertCorpseForPlayer(uint64 player_guid, bool insignia)
     {
         //in fact this function is called from several places
         //even when player doesn't have a corpse, not an error
-        //sLog.outError("ERROR: Try remove corpse that not in map for GUID %ul", player_guid);
+        //sLog.outError("Try remove corpse that not in map for GUID %ul", player_guid);
         return NULL;
     }
 

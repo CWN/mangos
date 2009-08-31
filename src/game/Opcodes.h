@@ -692,8 +692,8 @@ enum Opcodes
     CMSG_GROUP_ASSISTANT_LEADER                     = 0x28F,
     CMSG_BUYBACK_ITEM                               = 0x290,
     SMSG_SERVER_MESSAGE                             = 0x291,
-    CMSG_MEETINGSTONE_JOIN                          = 0x292,
-    CMSG_MEETINGSTONE_LEAVE                         = 0x293,
+    CMSG_MEETINGSTONE_JOIN                          = 0x292, // lua: SetSavedInstanceExtend
+    SMSG_MEETINGSTONE_LEAVE                         = 0x293,
     CMSG_MEETINGSTONE_CHEAT                         = 0x294,
     SMSG_MEETINGSTONE_SETQUEUE                      = 0x295,
     CMSG_MEETINGSTONE_INFO                          = 0x296,
@@ -1102,9 +1102,10 @@ enum Opcodes
 /// Player state
 enum SessionStatus
 {
-    STATUS_AUTHED = 0,                                      ///< Player authenticated
-    STATUS_LOGGEDIN,                                        ///< Player in game
-    STATUS_TRANSFER,                                        ///< Player transferring to another map
+    STATUS_AUTHED = 0,                                      ///< Player authenticated (_player==NULL, m_playerRecentlyLogout = false or will be reset before handler call)
+    STATUS_LOGGEDIN,                                        ///< Player in game (_player!=NULL, inWorld())
+    STATUS_TRANSFER,                                        ///< Player transferring to another map (_player!=NULL, !inWorld())
+    STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,                    ///< _player!= NULL or _player==NULL && m_playerRecentlyLogout)
     STATUS_NEVER                                            ///< Opcode not accepted from client (deprecated or server side only)
 };
 

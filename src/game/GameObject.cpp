@@ -73,14 +73,14 @@ void GameObject::CleanupsBeforeDelete()
                 owner->RemoveGameObject(this,false);
             else
             {
-                char * ownerType = "creature";
+                const char * ownerType = "creature";
                 if(IS_PLAYER_GUID(owner_guid))
                     ownerType = "player";
                 else if(IS_PET_GUID(owner_guid))
                     ownerType = "pet";
 
                 sLog.outError("Delete GameObject (GUID: %u Entry: %u SpellId %u LinkedGO %u) that lost references to owner (GUID %u Type '%s') GO list. Crash possible later.",
-                    GetGUIDLow(), GetGOInfo()->id, m_spellId, GetLinkedGameObjectEntry(), GUID_LOPART(owner_guid), ownerType);
+                    GetGUIDLow(), GetGOInfo()->id, m_spellId, GetGOInfo()->GetLinkedGameObjectEntry(), GUID_LOPART(owner_guid), ownerType);
             }
         }
     }
@@ -108,7 +108,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, float x, float
 
     if(!IsPositionValid())
     {
-        sLog.outError("ERROR: Gameobject (GUID: %u Entry: %u ) not created. Suggested coordinates isn't valid (X: %f Y: %f)",guidlow,name_id,x,y);
+        sLog.outError("Gameobject (GUID: %u Entry: %u ) not created. Suggested coordinates isn't valid (X: %f Y: %f)",guidlow,name_id,x,y);
         return false;
     }
 
@@ -241,11 +241,7 @@ void GameObject::Update(uint32 /*p_time*/)
                             Unit* caster = GetOwner();
                             if(caster && caster->GetTypeId()==TYPEID_PLAYER)
                             {
-                                if(caster->m_currentSpells[CURRENT_CHANNELED_SPELL])
-                                {
-                                    caster->m_currentSpells[CURRENT_CHANNELED_SPELL]->SendChannelUpdate(0);
-                                    caster->m_currentSpells[CURRENT_CHANNELED_SPELL]->finish(false);
-                                }
+                                caster->FinishSpell(CURRENT_CHANNELED_SPELL);
 
                                 WorldPacket data(SMSG_FISH_NOT_HOOKED,0);
                                 ((Player*)caster)->GetSession()->SendPacket(&data);
@@ -379,7 +375,7 @@ void GameObject::Update(uint32 /*p_time*/)
             {
                 case GAMEOBJECT_TYPE_DOOR:
                 case GAMEOBJECT_TYPE_BUTTON:
-                    if (GetAutoCloseTime() && (m_cooldownTime < time(NULL)))
+                    if (GetGOInfo()->GetAutoCloseTime() && (m_cooldownTime < time(NULL)))
                         ResetDoorOrButton();
                     break;
             }
@@ -419,7 +415,7 @@ void GameObject::Update(uint32 /*p_time*/)
             }
 
             //burning flags in some battlegrounds, if you find better condition, just add it
-            if (GetGoAnimProgress() > 0)
+            if (GetGOInfo()->IsDespawnAtAction() || GetGoAnimProgress() > 0)
             {
                 SendObjectDeSpawnAnim(GetGUID());
                 //reset flags
@@ -569,7 +565,7 @@ bool GameObject::LoadFromDB(uint32 guid, Map *map)
 
     if( !data )
     {
-        sLog.outErrorDb("ERROR: Gameobject (GUID: %u) not found in table `gameobject`, can't load. ",guid);
+        sLog.outErrorDb("Gameobject (GUID: %u) not found in table `gameobject`, can't load. ",guid);
         return false;
     }
 
@@ -594,7 +590,7 @@ bool GameObject::LoadFromDB(uint32 guid, Map *map)
     if (!Create(guid,entry, map, x, y, z, ang, rotation0, rotation1, rotation2, rotation3, animprogress, go_state) )
         return false;
 
-    if(!GetDespawnPossibility())
+    if(!GetGOInfo()->GetDespawnPossibility() && !GetGOInfo()->IsDespawnAtAction())
     {
         SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_NODESPAWN);
         m_spawnedByDefault = true;
@@ -638,24 +634,6 @@ void GameObject::DeleteFromDB()
 GameObjectInfo const *GameObject::GetGOInfo() const
 {
     return m_goInfo;
-}
-
-uint32 GameObject::GetLootId(GameObjectInfo const* ginfo)
-{
-    if (!ginfo)
-        return 0;
-
-    switch(ginfo->type)
-    {
-        case GAMEOBJECT_TYPE_CHEST:
-            return ginfo->chest.lootId;
-        case GAMEOBJECT_TYPE_FISHINGHOLE:
-            return ginfo->fishinghole.lootId;
-        case GAMEOBJECT_TYPE_FISHINGNODE:
-            return ginfo->fishnode.lootId;
-        default:
-            return 0;
-    }
 }
 
 /*********************************************************/
@@ -702,7 +680,7 @@ void GameObject::SaveRespawnTime()
         objmgr.SaveGORespawnTime(m_DBTableGuid,GetInstanceId(),m_respawnTime);
 }
 
-bool GameObject::isVisibleForInState(Player const* u, bool inVisibleList) const
+bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const
 {
     // Not in world
     if(!IsInWorld() || !u->IsInWorld())
@@ -733,7 +711,7 @@ bool GameObject::isVisibleForInState(Player const* u, bool inVisibleList) const
     }
 
     // check distance
-    return IsWithinDistInMap(u,World::GetMaxVisibleDistanceForObject() +
+    return IsWithinDistInMap(viewPoint,World::GetMaxVisibleDistanceForObject() +
         (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false);
 }
 
@@ -756,7 +734,7 @@ bool GameObject::ActivateToQuest( Player *pTarget)const
         // scan GO chest with loot including quest items
         case GAMEOBJECT_TYPE_CHEST:
         {
-            if(LootTemplates_Gameobject.HaveQuestLootForPlayer(GetLootId(), pTarget))
+            if(LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->GetLootId(), pTarget))
                 return true;
             break;
         }
@@ -841,7 +819,7 @@ void GameObject::UseDoorOrButton(uint32 time_to_restore, bool alternative /* = f
         return;
 
     if(!time_to_restore)
-        time_to_restore = GetAutoCloseTime();
+        time_to_restore = GetGOInfo()->GetAutoCloseTime();
 
     SwitchDoorOrButton(true,alternative);
     SetLootState(GO_ACTIVATED);
@@ -1075,11 +1053,7 @@ void GameObject::Use(Unit* user)
                 }
             }
 
-            if(player->m_currentSpells[CURRENT_CHANNELED_SPELL])
-            {
-                player->m_currentSpells[CURRENT_CHANNELED_SPELL]->SendChannelUpdate(0);
-                player->m_currentSpells[CURRENT_CHANNELED_SPELL]->finish();
-            }
+            player->FinishSpell(CURRENT_CHANNELED_SPELL);
             return;
         }
 
@@ -1110,14 +1084,13 @@ void GameObject::Use(Unit* user)
             // in case summoning ritual caster is GO creator
             spellCaster = caster;
 
-            if(!caster->m_currentSpells[CURRENT_CHANNELED_SPELL])
+            if(!caster->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
                 return;
 
             spellId = info->summoningRitual.spellId;
 
             // finish spell
-            caster->m_currentSpells[CURRENT_CHANNELED_SPELL]->SendChannelUpdate(0);
-            caster->m_currentSpells[CURRENT_CHANNELED_SPELL]->finish();
+            player->FinishSpell(CURRENT_CHANNELED_SPELL);
 
             // can be deleted now
             SetLootState(GO_JUST_DEACTIVATED);
@@ -1261,7 +1234,7 @@ void GameObject::Use(Unit* user)
         return;
     }
 
-    Spell *spell = new Spell(spellCaster, spellInfo, false);
+    Spell *spell = new Spell(spellCaster, spellInfo, false, GetGUID());
 
     // spell target is user of GO
     SpellCastTargets targets;

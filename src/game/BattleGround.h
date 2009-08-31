@@ -195,6 +195,7 @@ enum BattleGroundTeamId
     BG_TEAM_ALLIANCE        = 0,
     BG_TEAM_HORDE           = 1
 };
+#define BG_TEAMS_COUNT  2
 
 enum BattleGroundJoinError
 {
@@ -324,8 +325,9 @@ class BattleGround
         uint32 GetPlayersSize() const { return m_Players.size(); }
         uint32 GetRemovedPlayersSize() const { return m_RemovedPlayers.size(); }
 
-        std::map<uint64, BattleGroundScore*>::const_iterator GetPlayerScoresBegin() const { return m_PlayerScores.begin(); }
-        std::map<uint64, BattleGroundScore*>::const_iterator GetPlayerScoresEnd() const { return m_PlayerScores.end(); }
+        typedef std::map<uint64, BattleGroundScore*> BattleGroundScoreMap;
+        BattleGroundScoreMap::const_iterator GetPlayerScoresBegin() const { return m_PlayerScores.begin(); }
+        BattleGroundScoreMap::const_iterator GetPlayerScoresEnd() const { return m_PlayerScores.end(); }
         uint32 GetPlayerScoresSize() const { return m_PlayerScores.size(); }
 
         uint32 GetReviveQueueSize() const { return m_ReviveQueue.size(); }
@@ -441,13 +443,16 @@ class BattleGround
 
         void SetDeleteThis() {m_SetDeleteThis = true;}
 
+        /* virtual score-array - get's used in bg-subclasses */
+        int32 m_TeamScores[BG_TEAMS_COUNT];
+
     protected:
         //this method is called, when BG cannot spawn its own spirit guide, or something is wrong, It correctly ends BattleGround
         void EndNow();
 
         /* Scorekeeping */
-                                                            // Player scores
-        std::map<uint64, BattleGroundScore*>    m_PlayerScores;
+                                                            
+        BattleGroundScoreMap m_PlayerScores;                // Player scores
         // must be implemented in BG subclass
         virtual void RemovePlayer(Player * /*player*/, uint64 /*guid*/) {}
 
