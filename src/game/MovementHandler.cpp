@@ -263,6 +263,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         {
             recv_data.rpos(recv_data.wpos());               // prevent warnings spam
             return;
+        }
 
         if ((GetPlayer()->m_anti_transportGUID == 0) && (movementInfo.t_guid !=0))
         {
@@ -729,17 +730,29 @@ void WorldSession::HandleMoveKnockBackAck( WorldPacket & recv_data )
     // Currently not used but maybe use later for recheck final player position
     // (must be at call same as into "recv_data >> x >> y >> z >> orientation;"
 
-    CHECK_PACKET_SIZE(recv_data, 8+4+4+1+4+4+4+4+4);
-    MovementInfo movementInfo;
+    // CHECK_PACKET_SIZE(recv_data, 8+4+4+1+4+4+4+4+4);
 
     uint64 guid;
     uint32 sequence;
+    
+    recv_data >> guid;          //8
+    recv_data >> sequence;      //4
+
+    // skip not personal message;
+    if(_player->GetGUID() != guid)
+    {
+        recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
+        return;
+    }
+
+    MovementInfo movementInfo;
+    ReadMovementInfo(recv_data, &movementInfo);
+/*
     uint32 MovementFlags;
     uint32 ukn1;
     float xdirection,ydirection,hspeed,vspeed;
 
-    recv_data >> guid;          //8
-    recv_data >> sequence;      //4
+
     recv_data >> MovementFlags >> movementInfo.unk1 >> movementInfo.time; //4+1+4
     recv_data >> movementInfo.x >> movementInfo.y >> movementInfo.z >> movementInfo.o; //4+4+4+4
 
@@ -762,19 +775,27 @@ void WorldSession::HandleMoveKnockBackAck( WorldPacket & recv_data )
     CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4+4+4+4+4);
     recv_data >> ukn1; //unknown //4
     recv_data >> vspeed >> xdirection >> ydirection >> hspeed; //4+4+4+4
-
+*/
+/*
     #ifdef MOVEMENT_ANTICHEAT_DEBUG
     sLog.outDebug("%s CMSG_MOVE_KNOCK_BACK_ACK: tm:%d ftm:%d | %f,%f,%fo(%f) [%X]",GetPlayer()->GetName(),movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,MovementFlags);
     sLog.outDebug("%s CMSG_MOVE_KNOCK_BACK_ACK additional: vspeed:%f, hspeed:%f, xdir:%f ydir:%f",GetPlayer()->GetName(), vspeed, hspeed, xdirection, ydirection);
     #endif
 
-    // skip not personal message;
-    if(GetPlayer()->GetGUID()!=guid)
-        return;
-
     GetPlayer()->m_movementInfo = movementInfo;
     GetPlayer()->m_anti_last_hspeed = hspeed;
     GetPlayer()->m_anti_last_vspeed = vspeed < 3.2f ? vspeed - 1.0f : 3.2f;
+    GetPlayer()->m_anti_lastspeed_changetime = movementInfo.time + 1750;
+*/
+
+    #ifdef MOVEMENT_ANTICHEAT_DEBUG
+    sLog.outDebug("%s CMSG_MOVE_KNOCK_BACK_ACK: tm:%d ftm:%d | %f,%f,%fo(%f) [%X]",GetPlayer()->GetName(),movementInfo.time,movementInfo.fallTime,movementInfo.x,movementInfo.y,movementInfo.z,movementInfo.o,MovementFlags);
+    sLog.outDebug("%s CMSG_MOVE_KNOCK_BACK_ACK additional: vspeed:%f, hspeed:%f, xdir:%f ydir:%f",GetPlayer()->GetName(), movementInfo.j_unk, movementInfo.j_xyspeed, movementInfo.j_sinAngle, movementInfo.j_cosAngle);
+    #endif
+
+    GetPlayer()->m_movementInfo = movementInfo;
+    GetPlayer()->m_anti_last_hspeed = movementInfo.j_xyspeed;
+    GetPlayer()->m_anti_last_vspeed = movementInfo.j_unk < 3.2f ? movementInfo.j_unk - 1.0f : 3.2f;
     GetPlayer()->m_anti_lastspeed_changetime = movementInfo.time + 1750;
 }
 
