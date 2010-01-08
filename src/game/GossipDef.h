@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,17 +28,56 @@ class WorldSession;
 #define GOSSIP_MAX_MENU_ITEMS 64                            // client supported items unknown, but provided number must be enough
 #define DEFAULT_GOSSIP_MESSAGE              0xffffff
 
-//POI defines
+enum Gossip_Option
+{
+    GOSSIP_OPTION_NONE              = 0,                    //UNIT_NPC_FLAG_NONE                (0)
+    GOSSIP_OPTION_GOSSIP            = 1,                    //UNIT_NPC_FLAG_GOSSIP              (1)
+    GOSSIP_OPTION_QUESTGIVER        = 2,                    //UNIT_NPC_FLAG_QUESTGIVER          (2)
+    GOSSIP_OPTION_VENDOR            = 3,                    //UNIT_NPC_FLAG_VENDOR              (128)
+    GOSSIP_OPTION_TAXIVENDOR        = 4,                    //UNIT_NPC_FLAG_TAXIVENDOR          (8192)
+    GOSSIP_OPTION_TRAINER           = 5,                    //UNIT_NPC_FLAG_TRAINER             (16)
+    GOSSIP_OPTION_SPIRITHEALER      = 6,                    //UNIT_NPC_FLAG_SPIRITHEALER        (16384)
+    GOSSIP_OPTION_SPIRITGUIDE       = 7,                    //UNIT_NPC_FLAG_SPIRITGUIDE         (32768)
+    GOSSIP_OPTION_INNKEEPER         = 8,                    //UNIT_NPC_FLAG_INNKEEPER           (65536)
+    GOSSIP_OPTION_BANKER            = 9,                    //UNIT_NPC_FLAG_BANKER              (131072)
+    GOSSIP_OPTION_PETITIONER        = 10,                   //UNIT_NPC_FLAG_PETITIONER          (262144)
+    GOSSIP_OPTION_TABARDDESIGNER    = 11,                   //UNIT_NPC_FLAG_TABARDDESIGNER      (524288)
+    GOSSIP_OPTION_BATTLEFIELD       = 12,                   //UNIT_NPC_FLAG_BATTLEFIELDPERSON   (1048576)
+    GOSSIP_OPTION_AUCTIONEER        = 13,                   //UNIT_NPC_FLAG_AUCTIONEER          (2097152)
+    GOSSIP_OPTION_STABLEPET         = 14,                   //UNIT_NPC_FLAG_STABLE              (4194304)
+    GOSSIP_OPTION_ARMORER           = 15,                   //UNIT_NPC_FLAG_ARMORER             (4096)
+    GOSSIP_OPTION_UNLEARNTALENTS    = 16,                   //UNIT_NPC_FLAG_TRAINER             (16) (bonus option for GOSSIP_OPTION_TRAINER)
+    GOSSIP_OPTION_UNLEARNPETSKILLS  = 17,                   //UNIT_NPC_FLAG_TRAINER             (16) (bonus option for GOSSIP_OPTION_TRAINER)
+    GOSSIP_OPTION_MAX
+};
+
+enum GossipOptionIcon
+{
+    GOSSIP_ICON_CHAT                = 0,                    //white chat bubble
+    GOSSIP_ICON_VENDOR              = 1,                    //brown bag
+    GOSSIP_ICON_TAXI                = 2,                    //flight
+    GOSSIP_ICON_TRAINER             = 3,                    //book
+    GOSSIP_ICON_INTERACT_1          = 4,                    //interaction wheel
+    GOSSIP_ICON_INTERACT_2          = 5,                    //interaction wheel
+    GOSSIP_ICON_MONEY_BAG           = 6,                    //brown bag with yellow dot
+    GOSSIP_ICON_TALK                = 7,                    //white chat bubble with black dots
+    GOSSIP_ICON_TABARD              = 8,                    //tabard
+    GOSSIP_ICON_BATTLE              = 9,                    //two swords
+    GOSSIP_ICON_DOT                 = 10,                   //yellow dot
+    GOSSIP_ICON_MAX
+};
+
+//POI icons. Many more exist, list not complete.
 enum Poi_Icon
 {
-    ICON_POI_0                  =   0,                      // Grey ?
-    ICON_POI_1                  =   1,                      // Red ?
-    ICON_POI_2                  =   2,                      // Blue ?
+    ICON_POI_GREY_AV_MINE       =   0,                      // Grey mine lorry
+    ICON_POI_RED_AV_MINE        =   1,                      // Red mine lorry
+    ICON_POI_BLUE_AV_MINE       =   2,                      // Blue mine lorry
     ICON_POI_BWTOMB             =   3,                      // Blue and White Tomb Stone
-    ICON_POI_HOUSE              =   4,                      // House
-    ICON_POI_TOWER              =   5,                      // Tower
-    ICON_POI_REDFLAG            =   6,                      // Red Flag with Yellow !
-    ICON_POI_TOMB               =   7,                      // Tomb Stone
+    ICON_POI_SMALL_HOUSE        =   4,                      // Small house
+    ICON_POI_GREYTOWER          =   5,                      // Grey Tower
+    ICON_POI_REDFLAG            =   6,                      // Red Flag w/Yellow !
+    ICON_POI_TOMBSTONE          =   7,                      // Normal tomb stone (brown)
     ICON_POI_BWTOWER            =   8,                      // Blue and White Tower
     ICON_POI_REDTOWER           =   9,                      // Red Tower
     ICON_POI_BLUETOWER          =   10,                     // Blue Tower
@@ -46,9 +85,9 @@ enum Poi_Icon
     ICON_POI_REDTOMB            =   12,                     // Red Tomb Stone
     ICON_POI_RWTOMB             =   13,                     // Red and White Tomb Stone
     ICON_POI_BLUETOMB           =   14,                     // Blue Tomb Stone
-    ICON_POI_NOTHING            =   15,                     // NOTHING
-    ICON_POI_16                 =   16,                     // Red ?
-    ICON_POI_17                 =   17,                     // Grey ?
+    ICON_POI_BLANK              =   15,                     // Blank (not visible)
+    ICON_POI_16                 =   16,                     // Grey ?
+    ICON_POI_17                 =   17,                     // Blue/White ?
     ICON_POI_18                 =   18,                     // Blue ?
     ICON_POI_19                 =   19,                     // Red and White ?
     ICON_POI_20                 =   20,                     // Red ?
@@ -80,12 +119,21 @@ struct GossipMenuItem
     bool        m_gCoded;
     std::string m_gMessage;
     uint32      m_gSender;
-    uint32      m_gAction;
+    uint32      m_gOptionId;
     std::string m_gBoxMessage;
     uint32      m_gBoxMoney;
 };
 
 typedef std::vector<GossipMenuItem> GossipMenuItemList;
+
+struct GossipMenuItemData
+{
+    uint32 m_gAction_menu;
+    uint32 m_gAction_poi;
+    uint32 m_gAction_script;
+};
+
+typedef std::vector<GossipMenuItemData> GossipMenuItemDataList;
 
 struct QuestMenuItem
 {
@@ -108,6 +156,11 @@ class MANGOS_DLL_SPEC GossipMenu
         void AddMenuItem(uint8 Icon, char const* Message, bool Coded = false);
         void AddMenuItem(uint8 Icon, char const* Message, uint32 dtSender, uint32 dtAction, char const* BoxMessage, uint32 BoxMoney, bool Coded = false);
 
+        void SetMenuId(uint32 menu_id) { m_gMenuId = menu_id; }
+        uint32 GetMenuId() { return m_gMenuId; }
+
+        void AddGossipMenuItemData(uint32 action_menu, uint32 action_poi, uint32 action_script);
+
         unsigned int MenuItemCount() const
         {
             return m_gItems.size();
@@ -123,6 +176,11 @@ class MANGOS_DLL_SPEC GossipMenu
             return m_gItems[ Id ];
         }
 
+        GossipMenuItemData const& GetItemData(unsigned int indexId)
+        {
+            return m_gItemsData[indexId];
+        }
+
         uint32 MenuItemSender( unsigned int ItemId );
         uint32 MenuItemAction( unsigned int ItemId );
         bool MenuItemCoded( unsigned int ItemId );
@@ -130,7 +188,10 @@ class MANGOS_DLL_SPEC GossipMenu
         void ClearMenu();
 
     protected:
-        GossipMenuItemList m_gItems;
+        GossipMenuItemList      m_gItems;
+        GossipMenuItemDataList  m_gItemsData;
+
+        uint32 m_gMenuId;
 };
 
 class QuestMenu
@@ -187,6 +248,7 @@ class MANGOS_DLL_SPEC PlayerMenu
         void SendGossipMenu( uint32 TitleTextId, uint64 npcGUID );
         void CloseGossip();
         void SendPointOfInterest( float X, float Y, uint32 Icon, uint32 Flags, uint32 Data, const char * locName );
+        void SendPointOfInterest( uint32 poi_id );
         void SendTalking( uint32 textID );
         void SendTalking( char const * title, char const * text );
 

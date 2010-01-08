@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005,2006,2007 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,5 +168,5 @@ class MANGOS_DLL_DECL InstanceSaveManager : public MaNGOS::Singleton<InstanceSav
         ResetTimeQueue m_resetTimeQueue;
 };
 
-#define sInstanceSaveManager MaNGOS::Singleton<InstanceSaveManager>::Instance()
+#define sInstanceSaveMgr MaNGOS::Singleton<InstanceSaveManager>::Instance()
 #endif

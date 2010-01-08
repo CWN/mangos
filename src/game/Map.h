@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,12 +67,6 @@ typedef MaNGOS::SingleThreaded<GridRWLock>::Lock NullGuard;
 //******************************************
 // Map file format defines
 //******************************************
-#define MAP_MAGIC             'SPAM'
-#define MAP_VERSION_MAGIC     '5.0w'
-#define MAP_AREA_MAGIC        'AERA'
-#define MAP_HEIGHT_MAGIC      'TGHM'
-#define MAP_LIQUID_MAGIC      'QILM'
-
 struct map_fileheader
 {
     uint32 mapMagic;
@@ -178,7 +172,7 @@ class GridMap
     float  *m_liquid_map;
 
     bool  loadAreaData(FILE *in, uint32 offset, uint32 size);
-    bool  loadHeihgtData(FILE *in, uint32 offset, uint32 size);
+    bool  loadHeightData(FILE *in, uint32 offset, uint32 size);
     bool  loadLiquidData(FILE *in, uint32 offset, uint32 size);
 
     // Get height functions and pointers
@@ -277,8 +271,12 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         void MessageDistBroadcast(Player *, WorldPacket *, float dist, bool to_self, bool own_team_only = false);
         void MessageDistBroadcast(WorldObject *, WorldPacket *, float dist);
 
+        float GetVisibilityDistance() const { return m_VisibleDistance; }
+        //function for setting up visibility distance for maps on per-type/per-Id basis
+        virtual void InitVisibilityDistance();
+
         void PlayerRelocation(Player *, float x, float y, float z, float angl);
-        void CreatureRelocation(Creature *creature, float x, float y, float, float);
+        void CreatureRelocation(Creature *creature, float x, float y, float z, float orientation);
 
         template<class LOCK_TYPE, class T, class CONTAINER> void Visit(const CellLock<LOCK_TYPE> &cell, TypeContainerVisitor<T, CONTAINER> &visitor);
 
@@ -286,6 +284,12 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         {
             GridPair p = MaNGOS::ComputeGridPair(x, y);
             return( !getNGrid(p.x_coord, p.y_coord) || getNGrid(p.x_coord, p.y_coord)->GetGridState() == GRID_STATE_REMOVAL );
+        }
+
+        bool IsLoaded(float x, float y) const
+        {
+            GridPair p = MaNGOS::ComputeGridPair(x, y);
+            return loaded(p);
         }
 
         bool GetUnloadLock(const GridPair &p) const { return getNGrid(p.x_coord, p.y_coord)->getUnloadLock(); }
@@ -348,15 +352,23 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         bool CheckGridIntegrity(Creature* c, bool moved) const;
 
         uint32 GetInstanceId() const { return i_InstanceId; }
-        uint8 GetSpawnMode() const { return (i_spawnMode); }
         virtual bool CanEnter(Player* /*player*/) { return true; }
         const char* GetMapName() const;
+
+        // _currently_ spawnmode == difficulty, but this can be changes later, so use appropriate spawnmode/difficult functions
+        // for simplify later code support
+        // regular difficulty = continent/dungeon normal/raid normal difficulty
+        uint8 GetSpawnMode() const { return (i_spawnMode); }
+        Difficulty GetDifficulty() const { return Difficulty(GetSpawnMode()); }
+        bool IsRegularDifficulty() const { return GetDifficulty() == REGULAR_DIFFICULTY; }
+        uint32 GetMaxPlayers() const;
+        uint32 GetMaxResetDelay() const;
 
         bool Instanceable() const { return i_mapEntry && i_mapEntry->Instanceable(); }
         // NOTE: this duplicate of Instanceable(), but Instanceable() can be changed when BG also will be instanceable
         bool IsDungeon() const { return i_mapEntry && i_mapEntry->IsDungeon(); }
         bool IsRaid() const { return i_mapEntry && i_mapEntry->IsRaid(); }
-        bool IsHeroic() const { return i_spawnMode == DIFFICULTY_HEROIC; }
+        bool IsRaidOrHeroicDungeon() const { return IsRaid() || GetDifficulty() > DUNGEON_DIFFICULTY_NORMAL; }
         bool IsBattleGround() const { return i_mapEntry && i_mapEntry->IsBattleGround(); }
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
@@ -409,6 +421,16 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         Creature* GetCreature(uint64 guid);
         GameObject* GetGameObject(uint64 guid);
         DynamicObject* GetDynamicObject(uint64 guid);
+
+        void AddUpdateObject(Object *obj)
+        {
+            i_objectsToClientUpdate.insert(obj);
+        }
+
+        void RemoveUpdateObject(Object *obj)
+        {
+            i_objectsToClientUpdate.erase( obj );
+        }
     private:
         void LoadMapAndVMap(int gx, int gy);
         void LoadVMap(int gx, int gy);
@@ -416,7 +438,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         GridMap *GetGrid(float x, float y);
 
         void SetTimer(uint32 t) { i_gridExpiry = t < MIN_GRID_DELAY ? MIN_GRID_DELAY : t; }
-        //uint64 CalculateGridMask(const uint32 &y) const;
 
         void SendInitSelf( Player * player );
 
@@ -443,6 +464,8 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
 
         NGridType* getNGrid(uint32 x, uint32 y) const
         {
+            ASSERT(x < MAX_NUMBER_OF_GRIDS);
+            ASSERT(y < MAX_NUMBER_OF_GRIDS);
             return i_grids[x][y];
         }
 
@@ -451,6 +474,8 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
 
         void setNGrid(NGridType* grid, uint32 x, uint32 y);
 
+        void SendObjectUpdates();
+        std::set<Object *> i_objectsToClientUpdate;
     protected:
         void SetUnloadReferenceLock(const GridPair &p, bool on) { getNGrid(p.x_coord, p.y_coord)->setUnloadReferenceLock(on); }
 
@@ -461,6 +486,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         uint32 i_id;
         uint32 i_InstanceId;
         uint32 m_unloadTimer;
+        float m_VisibleDistance;
 
         MapRefManager m_mapRefManager;
         MapRefManager::iterator m_mapRefIter;
@@ -542,7 +568,8 @@ class MANGOS_DLL_SPEC InstanceMap : public Map
         bool CanEnter(Player* player);
         void SendResetWarnings(uint32 timeLeft) const;
         void SetResetSchedule(bool on);
-        uint32 GetMaxPlayers() const;
+
+        virtual void InitVisibilityDistance();
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;
@@ -561,6 +588,8 @@ class MANGOS_DLL_SPEC BattleGroundMap : public Map
         bool CanEnter(Player* player);
         void SetUnload();
         void UnloadAll(bool pForce);
+
+        virtual void InitVisibilityDistance();
         BattleGround* GetBG() { return m_bg; }
         void SetBG(BattleGround* bg) { m_bg = bg; }
     private:

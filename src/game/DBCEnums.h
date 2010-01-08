@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+* Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,25 @@ enum AreaFlags
     AREA_FLAG_UNUSED2          = 0x00020000,                // not used now (no area/zones with this flag set in 2.4.2)
     AREA_FLAG_UNK5             = 0x00040000,                // just used for Amani Pass, Hatchet Hills
     AREA_FLAG_LOWLEVEL         = 0x00100000                 // used for some starting areas with area_level <=15
+};
+
+enum Difficulty
+{
+    REGULAR_DIFFICULTY           = 0,
+
+    DUNGEON_DIFFICULTY_NORMAL    = 0,
+    DUNGEON_DIFFICULTY_HEROIC    = 1,
+};
+
+#define MAX_DIFFICULTY             2
+
+enum SpawnMask
+{
+    SPAWNMASK_REGULAR           = (1 << REGULAR_DIFFICULTY),// any any maps without spawn modes (continents/subway) or in minimal spawnmode
+
+    SPAWNMASK_DUNGEON_NORMAL    = (1 << DUNGEON_DIFFICULTY_NORMAL),
+    SPAWNMASK_DUNGEON_HEROIC    = (1 << DUNGEON_DIFFICULTY_HEROIC),
+    SPAWNMASK_DUNGEON_ALL       = (SPAWNMASK_DUNGEON_NORMAL | SPAWNMASK_DUNGEON_HEROIC)
 };
 
 enum FactionTemplateFlags

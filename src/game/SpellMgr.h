@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,6 +164,12 @@ bool IsSingleFromSpellSpecificPerTarget(SpellSpecific spellSpec1,SpellSpecific s
 
 bool IsPassiveSpell(uint32 spellId);
 
+inline bool IsDeathOnlySpell(SpellEntry const *spellInfo)
+{
+    return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_CAST_ON_DEAD
+        || spellInfo->Id == 2584;
+}
+
 inline bool IsDeathPersistentSpell(SpellEntry const *spellInfo)
 {
     return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT;
@@ -177,6 +183,9 @@ inline bool IsNonCombatSpell(SpellEntry const *spellInfo)
 bool IsPositiveSpell(uint32 spellId);
 bool IsPositiveEffect(uint32 spellId, uint32 effIndex);
 bool IsPositiveTarget(uint32 targetA, uint32 targetB);
+
+bool IsExplicitPositiveTarget(uint32 targetA);
+bool IsExplicitNegativeTarget(uint32 targetA);
 
 bool IsSingleTargetSpell(SpellEntry const *spellInfo);
 bool IsSingleTargetSpells(SpellEntry const *spellInfo1, SpellEntry const *spellInfo2);
@@ -198,7 +207,6 @@ inline bool IsCasterSourceTarget(uint32 target)
         case TARGET_TOTEM_WATER:
         case TARGET_TOTEM_AIR:
         case TARGET_TOTEM_FIRE:
-        case TARGET_SUMMON:
         case TARGET_AREAEFFECT_CUSTOM_2:
         case TARGET_RANDOM_RAID_MEMBER:
         case TARGET_SELF2:
@@ -335,9 +343,9 @@ inline uint32 GetSpellMechanicMask(SpellEntry const* spellInfo, int32 effect)
 {
     uint32 mask = 0;
     if (spellInfo->Mechanic)
-        mask |= 1<<spellInfo->Mechanic;
+        mask |= 1 << (spellInfo->Mechanic - 1);
     if (spellInfo->EffectMechanic[effect])
-        mask |= 1<<spellInfo->EffectMechanic[effect];
+        mask |= 1 << (spellInfo->EffectMechanic[effect] - 1);
     return mask;
 }
 
@@ -345,10 +353,10 @@ inline uint32 GetAllSpellMechanicMask(SpellEntry const* spellInfo)
 {
     uint32 mask = 0;
     if (spellInfo->Mechanic)
-        mask |= 1<<spellInfo->Mechanic;
+        mask |= 1 << (spellInfo->Mechanic - 1);
     for (int i=0; i< 3; ++i)
         if (spellInfo->EffectMechanic[i])
-            mask |= 1<<spellInfo->EffectMechanic[i];
+            mask |= 1 << (spellInfo->EffectMechanic[i]-1);
     return mask;
 }
 
@@ -620,8 +628,6 @@ class SpellMgr
             return 0;
         }
 
-        bool IsAffectedBySpell(SpellEntry const *spellInfo, uint32 spellId, uint8 effectId, uint64 familyFlags) const;
-
         SpellElixirMap const& GetSpellElixirMap() const { return mSpellElixirs; }
 
         uint32 GetSpellElixirMask(uint32 spellid) const
@@ -866,5 +872,5 @@ class SpellMgr
         SpellAreaForAreaMap  mSpellAreaForAreaMap;
 };
 
-#define spellmgr SpellMgr::Instance()
+#define sSpellMgr SpellMgr::Instance()
 #endif

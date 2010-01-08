@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,7 +113,7 @@ struct CharTitlesEntry
 {
     uint32      ID;                                         // 0, title ids, for example in Quest::GetCharTitleId()
     //uint32      unk1;                                     // 1 flags?
-    //char*       name[16];                                 // 2-17, unused
+    char*   name[16];                                       // 2-17
                                                             // 18 string flag, unused
     //char*       name2[16];                                // 19-34, unused
                                                             // 35 string flag, unused
@@ -431,14 +431,14 @@ struct ItemRandomPropertiesEntry
     //char*     internalName                                // 1   unused
     uint32    enchant_id[3];                                // 2-4
                                                             // 5-6 unused, 0 only values, reserved for additional enchantments?
-    //char*     nameSuffix[16]                              // 7-22, unused
+    char*     nameSuffix[16];                               // 7-22
                                                             // 23 nameSufix flags, unused
 };
 
 struct ItemRandomSuffixEntry
 {
     uint32    ID;                                           // 0
-    //char*     name[16]                                    // 1-16 unused
+    char*     nameSuffix[16];                               // 1-16
                                                             // 17, name flags, unused
                                                             // 18  unused
     uint32    enchant_id[3];                                // 19-21
@@ -474,7 +474,7 @@ struct MailTemplateEntry
     uint32      ID;                                         // 0
     //char*       subject[16];                              // 1-16
                                                             // 17 name flags, unused
-    //char*       content[16];                              // 18-33
+    char*       content[16];                                // 18-33
 };
 
 struct MapEntry
@@ -630,7 +630,7 @@ struct SpellEntry
     uint32    AttributesEx3;                                // 8
     uint32    AttributesEx4;                                // 9
     uint32    AttributesEx5;                                // 10
-    //uint32    AttributesEx6;                              // 11 not used
+    uint32    AttributesEx6;                                // 11
     uint32    Stances;                                      // 12
     uint32    StancesNot;                                   // 13
     uint32    Targets;                                      // 14

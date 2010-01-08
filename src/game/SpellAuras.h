@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,6 +164,7 @@ class MANGOS_DLL_SPEC Aura
         void HandleFarSight(bool Apply, bool Real);
         void HandleModPossessPet(bool Apply, bool Real);
         void HandleModMechanicImmunity(bool Apply, bool Real);
+        void HandleModMechanicImmunityMask(bool Apply, bool Real);
         void HandleAuraModSkill(bool Apply, bool Real);
         void HandleModDamagePercentDone(bool Apply, bool Real);
         void HandleModPercentStat(bool Apply, bool Real);
@@ -229,6 +230,10 @@ class MANGOS_DLL_SPEC Aura
         time_t GetAuraApplyTime() { return m_applyTime; }
         void UpdateAuraDuration();
         void SendAuraDurationForCaster(Player* caster);
+        uint32 GetAuraTicks() const { return m_periodicTick; }
+        uint32 GetAuraMaxTicks() const { return m_maxduration > 0 && m_modifier.periodictime > 0 ? m_maxduration / m_modifier.periodictime : 0; }
+
+        SpellModifier *getAuraSpellMod() {return m_spellmod; }
 
         uint64 const& GetCasterGUID() const { return m_caster_guid; }
         Unit* GetCaster() const;
@@ -241,6 +246,9 @@ class MANGOS_DLL_SPEC Aura
             m_maxduration = maxduration;
             m_duration = duration;
             m_procCharges = charges;
+
+            if(uint32 maxticks = GetAuraMaxTicks())
+                m_periodicTick = maxticks - m_duration / m_modifier.periodictime;
         }
 
         uint8 GetAuraSlot() const { return m_auraSlot; }
@@ -305,6 +313,8 @@ class MANGOS_DLL_SPEC Aura
         DiminishingGroup getDiminishGroup() const { return m_AuraDRGroup; }
 
         void TriggerSpell();
+
+        bool isAffectedOnSpell(SpellEntry const *spell) const;
     protected:
         Aura(SpellEntry const* spellproto, uint32 eff, int32 *currentBasePoints, Unit *target, Unit *caster = NULL, Item* castItem = NULL);
 
@@ -315,7 +325,7 @@ class MANGOS_DLL_SPEC Aura
         void PeriodicTick();
         void PeriodicDummyTick();
 
-        void ReapplyAffectedPassiveAuras(Unit* target, SpellModifier const& spellmod);
+        void ReapplyAffectedPassiveAuras(Unit* target, SpellModifier const& spellmod, bool owner_mode);
 
         Modifier m_modifier;
         SpellModifier *m_spellmod;
@@ -347,6 +357,7 @@ class MANGOS_DLL_SPEC Aura
         bool m_isSingleTargetAura:1;                        // true if it's a single target spell and registered at caster - can change at spell steal for example
 
         int32 m_periodicTimer;
+        uint32 m_periodicTick;                              // Tick count pass (including current if use in tick code) from aura apply, used for some tick count dependent aura effects
         uint32 m_PeriodicEventId;
         DiminishingGroup m_AuraDRGroup;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include "Utilities/UnorderedMap.h"
 #include "Policies/ThreadingModel.h"
 
-#include "ByteBuffer.h"
 #include "UpdateData.h"
 
 #include "GridDefines.h"
@@ -88,7 +87,6 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
 
     public:
         typedef UNORDERED_MAP<uint64, Corpse* >      Player2CorpsesMapType;
-        typedef UNORDERED_MAP<Player*, UpdateData>::value_type UpdateDataValueType;
 
         template<class T> static T* GetObjectInWorld(uint64 guid, T* /*fake*/)
         {
@@ -145,7 +143,7 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
         static Pet* GetPet(uint64 guid);
         static Player* FindPlayer(uint64);
 
-        Player* FindPlayerByName(const char *name) ;
+        static Player* FindPlayerByName(const char *name) ;
 
         HashMapHolder<Player>::MapType& GetPlayers()
         {
@@ -165,26 +163,9 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
         void RemoveObject(Player *pl)
         {
             HashMapHolder<Player>::Remove(pl);
-
-            Guard guard(i_updateGuard);
-            i_objects.erase((Object *)pl);
         }
 
         void SaveAllPlayers();
-
-        void AddUpdateObject(Object *obj)
-        {
-            Guard guard(i_updateGuard);
-            i_objects.insert(obj);
-        }
-
-        void RemoveUpdateObject(Object *obj)
-        {
-            Guard guard(i_updateGuard);
-            i_objects.erase( obj );
-        }
-
-        void Update(uint32 diff);
 
         Corpse* GetCorpseForPlayerGUID(uint64 guid);
         void RemoveCorpse(Corpse *corpse);
@@ -192,33 +173,17 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
         void AddCorpsesToGrid(GridPair const& gridpair,GridType& grid,Map* map);
         Corpse* ConvertCorpseForPlayer(uint64 player_guid, bool insignia = false);
 
-        static void UpdateObject(Object* obj, Player* exceptPlayer);
-        static void _buildUpdateObject(Object* obj, UpdateDataMapType &);
-
-        static void UpdateObjectVisibility(WorldObject* obj);
-        static void UpdateVisibilityForPlayer(Player* player);
     private:
-        struct WorldObjectChangeAccumulator
-        {
-            UpdateDataMapType &i_updateDatas;
-            WorldObject &i_object;
-            WorldObjectChangeAccumulator(WorldObject &obj, UpdateDataMapType &d) : i_updateDatas(d), i_object(obj) {}
-            void Visit(PlayerMapType &);
-            template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
-        };
-
-        friend struct WorldObjectChangeAccumulator;
         Player2CorpsesMapType   i_player2corpse;
 
         typedef ACE_Thread_Mutex LockType;
         typedef MaNGOS::GeneralLock<LockType > Guard;
 
-        static void _buildChangeObjectForPlayer(WorldObject *, UpdateDataMapType &);
-        static void _buildPacket(Player *, Object *, UpdateDataMapType &);
-        std::set<Object *> i_objects;
         LockType i_playerGuard;
-        LockType i_updateGuard;
         LockType i_corpseGuard;
         LockType i_petGuard;
 };
+
+#define sObjectAccessor ObjectAccessor::Instance()
+
 #endif

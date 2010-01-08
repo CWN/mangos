@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -248,7 +248,7 @@ void BattleGroundQueue::AddPlayer(Player *plr, GroupQueueInfo *ginfo)
 
 void BattleGroundQueue::RemovePlayer(const uint64& guid, bool decreaseInvitedCount)
 {
-    Player *plr = objmgr.GetPlayer(guid);
+    Player *plr = sObjectMgr.GetPlayer(guid);
 
     int32 queue_id = 0;                                     // signed for proper for-loop finish
     QueuedPlayersMap::iterator itr;
@@ -346,7 +346,7 @@ void BattleGroundQueue::RemovePlayer(const uint64& guid, bool decreaseInvitedCou
         {
             // remove next player, this is recursive
             // first send removal information
-            if(Player *plr2 = objmgr.GetPlayer(group->Players.begin()->first))
+            if(Player *plr2 = sObjectMgr.GetPlayer(group->Players.begin()->first))
             {
                 BattleGround * bg = sBattleGroundMgr.GetBattleGroundTemplate(group->BgTypeId);
                 uint32 bgQueueTypeId = BattleGroundMgr::BGQueueTypeId(group->BgTypeId,group->ArenaType);
@@ -384,7 +384,7 @@ void BattleGroundQueue::AnnounceWorld(GroupQueueInfo *ginfo, const uint64& playe
     {
         if( sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE) )
         {
-            Player *plr = objmgr.GetPlayer(playerGUID);
+            Player *plr = sObjectMgr.GetPlayer(playerGUID);
             if(!plr)
                 return;
 
@@ -461,7 +461,7 @@ bool BattleGroundQueue::InviteGroupToBG(GroupQueueInfo * ginfo, BattleGround * b
             itr->second->LastInviteTime = getMSTime();
 
             // get the player
-            Player* plr = objmgr.GetPlayer(itr->first);
+            Player* plr = sObjectMgr.GetPlayer(itr->first);
             // if offline, skip him
             if(!plr)
                 continue;
@@ -571,7 +571,7 @@ void BattleGroundQueue::BGEndedRemoveInvites(BattleGround *bg)
                 }
 
                 // get the player
-                Player * plr = objmgr.GetPlayer(itr2->first);
+                Player * plr = sObjectMgr.GetPlayer(itr2->first);
                 if(!plr)
                 {
                     sLog.outError("Player offline when trying to remove from GroupQueueInfo, this should never happen.");
@@ -984,7 +984,7 @@ void BattleGroundQueue::Update(BattleGroundTypeId bgTypeId, uint32 queue_id, uin
 
 bool BGQueueInviteEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
 {
-    Player* plr = objmgr.GetPlayer( m_PlayerGuid );
+    Player* plr = sObjectMgr.GetPlayer( m_PlayerGuid );
 
     // player logged off (we should do nothing, he is correctly removed from queue in another procedure)
     if (!plr)
@@ -1024,7 +1024,7 @@ void BGQueueInviteEvent::Abort(uint64 /*e_time*/)
 
 bool BGQueueRemoveEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
 {
-    Player* plr = objmgr.GetPlayer( m_PlayerGuid );
+    Player* plr = sObjectMgr.GetPlayer( m_PlayerGuid );
     if (!plr)
         // player logged off (we should do nothing, he is correctly removed from queue in another procedure)
         return true;
@@ -1045,7 +1045,7 @@ bool BGQueueRemoveEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
         {
             if (qMapItr->second.GroupInfo->IsRated)
             {
-                ArenaTeam * at = objmgr.GetArenaTeamById(qMapItr->second.GroupInfo->ArenaTeamId);
+                ArenaTeam * at = sObjectMgr.GetArenaTeamById(qMapItr->second.GroupInfo->ArenaTeamId);
                 if (at)
                 {
                     sLog.outDebug("UPDATING memberLost's personal arena rating for %u by opponents rating: %u", GUID_LOPART(plr->GetGUID()), qMapItr->second.GroupInfo->OpponentsTeamRating);
@@ -1263,7 +1263,7 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
         for(int i = 1; i >= 0; --i)
         {
             uint32 at_id = bg->m_ArenaTeamIds[i];
-            ArenaTeam * at = objmgr.GetArenaTeamById(at_id);
+            ArenaTeam * at = sObjectMgr.GetArenaTeamById(at_id);
             if(at)
                 *data << at->GetName();
             else//*/
@@ -1287,7 +1287,7 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
     {
         *data << (uint64)itr->first;
         *data << (int32)itr->second->KillingBlows;
-        Player *plr = objmgr.GetPlayer(itr->first);
+        Player *plr = sObjectMgr.GetPlayer(itr->first);
         uint32 team = bg->GetPlayerTeam(itr->first);
         if(!team && plr) team = plr->GetTeam();
         if(type == 0)
@@ -1323,7 +1323,7 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
                 *data << (uint32)((BattleGroundAVScore*)itr->second)->GraveyardsDefended;   // GraveyardsDefended
                 *data << (uint32)((BattleGroundAVScore*)itr->second)->TowersAssaulted;      // TowersAssaulted
                 *data << (uint32)((BattleGroundAVScore*)itr->second)->TowersDefended;       // TowersDefended
-                *data << (uint32)((BattleGroundAVScore*)itr->second)->MinesCaptured;        // MinesCaptured
+                *data << (uint32)((BattleGroundAVScore*)itr->second)->SecondaryObjectives;  // SecondaryObjectives - free some of the Lieutnants
                 break;
             case BATTLEGROUND_WS:
                 *data << (uint32)0x00000002;                // count of next fields
@@ -1482,7 +1482,7 @@ BattleGround * BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeI
     }
 
     // generate a new instance id
-    bg->SetInstanceID(MapManager::Instance().GenerateInstanceId()); // set instance id
+    bg->SetInstanceID(sMapMgr.GenerateInstanceId());         // set instance id
 
     // reset the new bg (set status to status_wait_queue from status_none)
     bg->Reset();
@@ -1521,7 +1521,7 @@ uint32 BattleGroundMgr::CreateBattleGround(BattleGroundTypeId bgTypeId, uint32 M
         case BATTLEGROUND_AA: bg = new BattleGroundAA; break;
         case BATTLEGROUND_EY: bg = new BattleGroundEY; break;
         case BATTLEGROUND_RL: bg = new BattleGroundRL; break;
-        default:bg = new BattleGround;   break;             // placeholder for non implemented BG
+        default:              bg = new BattleGround;   break;                           // placeholder for non implemented BG
     }
 
     bg->SetMapId(MapID);
@@ -1706,7 +1706,7 @@ void BattleGroundMgr::DistributeArenaPoints()
     std::map<uint32, uint32> PlayerPoints;
 
     //at first update all points for all team members
-    for(ObjectMgr::ArenaTeamMap::iterator team_itr = objmgr.GetArenaTeamMapBegin(); team_itr != objmgr.GetArenaTeamMapEnd(); ++team_itr)
+    for(ObjectMgr::ArenaTeamMap::iterator team_itr = sObjectMgr.GetArenaTeamMapBegin(); team_itr != sObjectMgr.GetArenaTeamMapEnd(); ++team_itr)
     {
         if(ArenaTeam * at = team_itr->second)
         {
@@ -1720,7 +1720,7 @@ void BattleGroundMgr::DistributeArenaPoints()
         //update to database
         CharacterDatabase.PExecute("UPDATE characters SET arena_pending_points = '%u' WHERE `guid` = '%u'", plr_itr->second, plr_itr->first);
         //add points if player is online
-        Player* pl = objmgr.GetPlayer(plr_itr->first);
+        Player* pl = sObjectMgr.GetPlayer(plr_itr->first);
         if (pl)
             pl->ModifyArenaPoints(plr_itr->second);
     }
@@ -1730,7 +1730,7 @@ void BattleGroundMgr::DistributeArenaPoints()
     sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_ONLINE_END);
 
     sWorld.SendWorldText(LANG_DIST_ARENA_POINTS_TEAM_START);
-    for(ObjectMgr::ArenaTeamMap::iterator titr = objmgr.GetArenaTeamMapBegin(); titr != objmgr.GetArenaTeamMapEnd(); ++titr)
+    for(ObjectMgr::ArenaTeamMap::iterator titr = sObjectMgr.GetArenaTeamMapBegin(); titr != sObjectMgr.GetArenaTeamMapEnd(); ++titr)
     {
         if(ArenaTeam * at = titr->second)
         {
@@ -1800,16 +1800,6 @@ void BattleGroundMgr::SendToBattleGround(Player *pl, uint32 instanceId)
     {
         sLog.outError("player %u trying to port to non-existent bg instance %u",pl->GetGUIDLow(), instanceId);
     }
-}
-
-void BattleGroundMgr::SendAreaSpiritHealerQueryOpcode(Player *pl, BattleGround *bg, const uint64& guid)
-{
-    WorldPacket data(SMSG_AREA_SPIRIT_HEALER_TIME, 12);
-    uint32 time_ = 30000 - bg->GetLastResurrectTime();      // resurrect every 30 seconds
-    if(time_ == uint32(-1))
-        time_ = 0;
-    data << guid << time_;
-    pl->GetSession()->SendPacket(&data);
 }
 
 bool BattleGroundMgr::IsArenaType(BattleGroundTypeId bgTypeId)
@@ -1966,3 +1956,116 @@ void BattleGroundMgr::LoadBattleMastersEntry()
     sLog.outString( ">> Loaded %u battlemaster entries", count );
 }
 
+void BattleGroundMgr::LoadBattleEventIndexes()
+{
+    BattleGroundEventIdx events;
+    events.event1 = BG_EVENT_NONE;
+    events.event2 = BG_EVENT_NONE;
+    m_GameObjectBattleEventIndexMap.clear();             // need for reload case
+    m_GameObjectBattleEventIndexMap[-1] = events;
+    m_CreatureBattleEventIndexMap.clear();               // need for reload case
+    m_CreatureBattleEventIndexMap[-1] = events;
+
+    uint32 count = 0;
+
+    QueryResult *result =
+        //                              0            1           2             3                     4           5           6
+        WorldDatabase.PQuery( "SELECT data.typ, data.guid1, data.ev1 AS ev1, data.ev2 AS ev2, data.map AS m, data.guid2, description.map, "
+        //                              7                  8                   9
+                                      "description.event1, description.event2, description.description "
+                                 "FROM "
+                                    "(SELECT '1' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
+                                        "FROM gameobject_battleground AS a "
+                                        "LEFT OUTER JOIN gameobject AS b ON a.guid = b.guid "
+                                     "UNION "
+                                     "SELECT '2' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
+                                        "FROM creature_battleground AS a "
+                                        "LEFT OUTER JOIN creature AS b ON a.guid = b.guid "
+                                    ") data "
+                                    "RIGHT OUTER JOIN battleground_events AS description ON data.map = description.map "
+                                        "AND data.ev1 = description.event1 AND data.ev2 = description.event2 "
+        // full outer join doesn't work in mysql :-/ so just UNION-select the same again and add a left outer join
+                              "UNION "
+                              "SELECT data.typ, data.guid1, data.ev1, data.ev2, data.map, data.guid2, description.map, "
+                                      "description.event1, description.event2, description.description "
+                                 "FROM "
+                                    "(SELECT '1' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
+                                        "FROM gameobject_battleground AS a "
+                                        "LEFT OUTER JOIN gameobject AS b ON a.guid = b.guid "
+                                     "UNION "
+                                     "SELECT '2' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
+                                        "FROM creature_battleground AS a "
+                                        "LEFT OUTER JOIN creature AS b ON a.guid = b.guid "
+                                    ") data "
+                                    "LEFT OUTER JOIN battleground_events AS description ON data.map = description.map "
+                                        "AND data.ev1 = description.event1 AND data.ev2 = description.event2 "
+                              "ORDER BY m, ev1, ev2" );
+    if(!result)
+    {
+        barGoLink bar(1);
+        bar.step();
+
+        sLog.outString();
+        sLog.outErrorDb(">> Loaded 0 battleground eventindexes.");
+        return;
+    }
+
+    barGoLink bar(result->GetRowCount());
+
+    do
+    {
+        bar.step();
+        Field *fields = result->Fetch();
+        if (fields[2].GetUInt8() == BG_EVENT_NONE || fields[3].GetUInt8() == BG_EVENT_NONE)
+            continue;                                       // we don't need to add those to the eventmap
+
+        bool gameobject         = (fields[0].GetUInt8() == 1);
+        uint32 dbTableGuidLow   = fields[1].GetUInt32();
+        events.event1           = fields[2].GetUInt8();
+        events.event2           = fields[3].GetUInt8();
+        uint32 map              = fields[4].GetUInt32();
+
+        uint32 desc_map = fields[6].GetUInt32();
+        uint8 desc_event1 = fields[7].GetUInt8();
+        uint8 desc_event2 = fields[8].GetUInt8();
+        const char *description = fields[9].GetString();
+
+        // checking for NULL - through right outer join this will mean following:
+        if (fields[5].GetUInt32() != dbTableGuidLow)
+        {
+            sLog.outErrorDb("BattleGroundEvent: %s with nonexistant guid %u for event: map:%u, event1:%u, event2:%u (\"%s\")",
+                (gameobject) ? "gameobject" : "creature", dbTableGuidLow, map, events.event1, events.event2, description);
+            continue;
+        }
+
+        // checking for NULL - through full outer join this can mean 2 things:
+        if (desc_map != map)
+        {
+            // there is an event missing
+            if (dbTableGuidLow == 0)
+            {
+                sLog.outErrorDb("BattleGroundEvent: missing db-data for map:%u, event1:%u, event2:%u (\"%s\")", desc_map, desc_event1, desc_event2, description);
+                continue;
+            }
+            // we have an event which shouldn't exist
+            else
+            {
+                sLog.outErrorDb("BattleGroundEvent: %s with guid %u is registered, for a nonexistant event: map:%u, event1:%u, event2:%u",
+                    (gameobject) ? "gameobject" : "creature", dbTableGuidLow, map, events.event1, events.event2);
+                continue;
+            }
+        }
+
+        if (gameobject)
+            m_GameObjectBattleEventIndexMap[dbTableGuidLow] = events;
+        else
+            m_CreatureBattleEventIndexMap[dbTableGuidLow] = events;
+
+        ++count;
+
+    } while(result->NextRow());
+
+    sLog.outString();
+    sLog.outString( ">> Loaded %u battleground eventindexes", count);
+    delete result;
+}

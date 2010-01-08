@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,8 +63,8 @@ void Totem::Summon(Unit* owner)
     CreatureInfo const *cinfo = GetCreatureInfo();
     if(owner->GetTypeId() == TYPEID_PLAYER && cinfo)
     {
-        uint32 display_id = objmgr.ChooseDisplayId(((Player*)owner)->GetTeam(), cinfo);
-        CreatureModelInfo const *minfo = objmgr.GetCreatureModelRandomGender(display_id);
+        uint32 display_id = sObjectMgr.ChooseDisplayId(((Player*)owner)->GetTeam(), cinfo);
+        CreatureModelInfo const *minfo = sObjectMgr.GetCreatureModelRandomGender(display_id);
         if (minfo)
             display_id = minfo->modelid;
         SetDisplayId(display_id);
@@ -75,6 +75,10 @@ void Totem::Summon(Unit* owner)
     SendMessageToSet(&data,true);
 
     AIM_Initialize();
+
+    // there are some totems, which exist just for their visual appeareance
+    if (!GetSpell())
+        return;
 
     switch(m_type)
     {

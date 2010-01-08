@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
   `creature_ai_version` varchar(120) default NULL,
-  `required_062______01_mangos_spell_learn_spell` bit(1) default NULL
+  `required_088_9095_01_mangos_command` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -127,6 +127,256 @@ CREATE TABLE `areatrigger_teleport` (
 LOCK TABLES `areatrigger_teleport` WRITE;
 /*!40000 ALTER TABLE `areatrigger_teleport` DISABLE KEYS */;
 /*!40000 ALTER TABLE `areatrigger_teleport` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `battleground_events`
+--
+
+DROP TABLE IF EXISTS `battleground_events`;
+CREATE TABLE `battleground_events` (
+  `map` smallint(5) NOT NULL,
+  `event1` tinyint(3) unsigned NOT NULL,
+  `event2` tinyint(3) unsigned NOT NULL,
+  `description` varchar(255) NOT NULL,
+  PRIMARY KEY  (`map`,`event1`,`event2`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `battleground_events`
+--
+
+LOCK TABLES `battleground_events` WRITE;
+/*!40000 ALTER TABLE `battleground_events` DISABLE KEYS */;
+INSERT INTO battleground_events (map, event1, event2, description) VALUES
+-- WS
+(489, 0, 0, 'Alliance Flag'),
+(489, 1, 0, 'Horde Flag'),
+(489, 2, 0, 'Spirit Guides'),
+(489, 254, 0, 'Doors'),
+-- AB
+(529, 0, 0, 'Stables - neutral'),
+(529, 0, 1, 'Stables - alliance contested'),
+(529, 0, 2, 'Stables - horde contested'),
+(529, 0, 3, 'Stables - alliance owned'),
+(529, 0, 4, 'Stables - horde owned'),
+(529, 1, 0, 'Blacksmith - neutral'),
+(529, 1, 1, 'Blacksmith - alliance contested'),
+(529, 1, 2, 'Blacksmith - horde contested'),
+(529, 1, 3, 'Blacksmith - alliance owned'),
+(529, 1, 4, 'Blacksmith - horde owned'),
+(529, 2, 0, 'Farm - neutral'),
+(529, 2, 1, 'Farm - alliance contested'),
+(529, 2, 2, 'Farm - horde contested'),
+(529, 2, 3, 'Farm - alliance owned'),
+(529, 2, 4, 'Farm - horde owned'),
+(529, 3, 0, 'Lumber Mill - neutral'),
+(529, 3, 1, 'Lumber Mill - alliance contested'),
+(529, 3, 2, 'Lumber Mill - horde contested'),
+(529, 3, 3, 'Lumber Mill - alliance owned'),
+(529, 3, 4, 'Lumber Mill - horde owned'),
+(529, 4, 0, 'Gold Mine - neutral'),
+(529, 4, 1, 'Gold Mine - alliance contested'),
+(529, 4, 2, 'Gold Mine - horde contested'),
+(529, 4, 3, 'Gold Mine - alliance owned'),
+(529, 4, 4, 'Gold Mine - horde owned'),
+(529, 254, 0, 'doors'),
+-- EY
+(566, 0, 0, 'Fel Reaver - alliance'),
+(566, 0, 1, 'Fel Reaver - horde'),
+(566, 0, 2, 'Fel Reaver - neutral'),
+(566, 1, 0, 'Blood Elf - alliance'),
+(566, 1, 1, 'Blood Elf - horde'),
+(566, 1, 2, 'Blood Elf - neutral'),
+(566, 2, 0, 'Draenei Ruins - alliance'),
+(566, 2, 1, 'Draenei Ruins - horde'),
+(566, 2, 2, 'Draenei Ruins - neutral'),
+(566, 3, 0, 'Mage Tower - alliance'),
+(566, 3, 1, 'Mage Tower - horde'),
+(566, 3, 2, 'Mage Tower - neutral'),
+(566, 4, 0, 'capture flag - Fel Reaver'),
+(566, 4, 1, 'capture flag - Blood Elf'),
+(566, 4, 2, 'capture flag - Draenei Ruins'),
+(566, 4, 3, 'capture flag - Mage Tower'),
+(566, 4, 4, 'capture flag - center'),
+(566, 254, 0, 'doors'),
+-- arenas
+(559, 253, 0, 'buffs'),
+(559, 254, 0, 'doors'),
+(572, 253, 0, 'buffs'),
+(572, 254, 0, 'doors'),
+(562, 253, 0, 'buffs'),
+(562, 254, 0, 'doors'),
+-- alterac valley
+(30, 254, 0, 'Doors'),
+
+(30, 0, 0, 'Firstaid Station - Alliance assaulted'),
+(30, 0, 1, 'Firstaid Station - ALliance control'),
+(30, 0, 2, 'Firstaid Station - Horde assaulted'),
+(30, 0, 3, 'Firstaid Station - Horde control'),
+
+(30, 1, 0, 'Stormpike Grave - Alliance assaulted'),
+(30, 1, 1, 'Stormpike Grave - ALliance control'),
+(30, 1, 2, 'Stormpike Grave - Horde assaulted'),
+(30, 1, 3, 'Stormpike Grave - Horde control'),
+
+(30, 2, 0, 'Stoneheart Grave - Alliance assaulted'),
+(30, 2, 1, 'Stoneheart Grave - ALliance control'),
+(30, 2, 2, 'Stoneheart Grave - Horde assaulted'),
+(30, 2, 3, 'Stoneheart Grave - Horde control'),
+
+(30, 3, 0, 'Snowfall Grave - Alliance assaulted'),
+(30, 3, 1, 'Snowfall Grave - ALliance control'),
+(30, 3, 2, 'Snowfall Grave - Horde assaulted'),
+(30, 3, 3, 'Snowfall Grave - Horde control'),
+(30, 3, 5, 'Snowfall Grave - Neutral control'),
+
+(30, 4, 0, 'Iceblood Grave - Alliance assaulted'),
+(30, 4, 1, 'Iceblood Grave - ALliance control'),
+(30, 4, 2, 'Iceblood Grave - Horde assaulted'),
+(30, 4, 3, 'Iceblood Grave - Horde control'),
+
+(30, 5, 0, 'Frostwolf Grave - Alliance assaulted'),
+(30, 5, 1, 'Frostwolf Grave - ALliance control'),
+(30, 5, 2, 'Frostwolf Grave - Horde assaulted'),
+(30, 5, 3, 'Frostwolf Grave - Horde control'),
+
+(30, 6, 0, 'Frostwolf Hut - Alliance assaulted'),
+(30, 6, 1, 'Frostwolf Hut - ALliance control'),
+(30, 6, 2, 'Frostwolf Hut - Horde assaulted'),
+(30, 6, 3, 'Frostwolf Hut - Horde control'),
+
+(30, 7, 1, 'Dunbaldar South - ALliance control'),
+(30, 7, 2, 'Dunbaldar South - Horde assaulted'),
+(30, 7, 3, 'Dunbaldar South - Horde control'),
+
+(30, 8, 1, 'Dunbaldar North - ALliance control'),
+(30, 8, 2, 'Dunbaldar North - Horde assaulted'),
+(30, 8, 3, 'Dunbaldar North - Horde control'),
+
+(30, 9, 1, 'Icewing Bunker - ALliance control'),
+(30, 9, 2, 'Icewing Bunker - Horde assaulted'),
+(30, 9, 3, 'Icewing Bunker - Horde control'),
+
+(30, 10, 1, 'Stoneheart Bunker - ALliance control'),
+(30, 10, 2, 'Stoneheart Bunker - Horde assaulted'),
+(30, 10, 3, 'Stoneheart Bunker - Horde control'),
+
+(30, 11, 0, 'Iceblood Tower - Alliance assaulted'),
+(30, 11, 1, 'Iceblood Tower - ALliance control'),
+(30, 11, 3, 'Iceblood Tower - Horde control'),
+
+(30, 12, 0, 'Tower Point - Alliance assaulted'),
+(30, 12, 1, 'Tower Point - ALliance control'),
+(30, 12, 3, 'Tower Point - Horde control'),
+
+(30, 13, 0, 'Frostwolf east Tower - Alliance assaulted'),
+(30, 13, 1, 'Frostwolf east Tower - ALliance control'),
+(30, 13, 3, 'Frostwolf east Tower - Horde control'),
+
+(30, 14, 0, 'Frostwolf west Tower - Alliance assaulted'),
+(30, 14, 1, 'Frostwolf west Tower - ALliance control'),
+(30, 14, 3, 'Frostwolf west Tower - Horde control'),
+
+
+(30, 15, 0, 'Firstaid Station - Alliance Defender Quest0'),
+(30, 15, 1, 'Firstaid Station - Alliance Defender Quest1'),
+(30, 15, 2, 'Firstaid Station - Alliance Defender Quest2'),
+(30, 15, 3, 'Firstaid Station - Alliance Defender Quest3'),
+(30, 15, 4, 'Firstaid Station - Horde Defender Quest0'),
+(30, 15, 5, 'Firstaid Station - Horde Defender Quest1'),
+(30, 15, 6, 'Firstaid Station - Horde Defender Quest2'),
+(30, 15, 7, 'Firstaid Station - Horde Defender Quest3'),
+
+(30, 16, 0, 'Stormpike Grave - Alliance Defender Quest0'),
+(30, 16, 1, 'Stormpike Grave - Alliance Defender Quest1'),
+(30, 16, 2, 'Stormpike Grave - Alliance Defender Quest2'),
+(30, 16, 3, 'Stormpike Grave - Alliance Defender Quest3'),
+(30, 16, 4, 'Stormpike Grave - Horde Defender Quest0'),
+(30, 16, 5, 'Stormpike Grave - Horde Defender Quest1'),
+(30, 16, 6, 'Stormpike Grave - Horde Defender Quest2'),
+(30, 16, 7, 'Stormpike Grave - Horde Defender Quest3'),
+
+(30, 17, 0, 'Stoneheart Grave - Alliance Defender Quest0'),
+(30, 17, 1, 'Stoneheart Grave - Alliance Defender Quest1'),
+(30, 17, 2, 'Stoneheart Grave - Alliance Defender Quest2'),
+(30, 17, 3, 'Stoneheart Grave - Alliance Defender Quest3'),
+(30, 17, 4, 'Stoneheart Grave - Horde Defender Quest0'),
+(30, 17, 5, 'Stoneheart Grave - Horde Defender Quest1'),
+(30, 17, 6, 'Stoneheart Grave - Horde Defender Quest2'),
+(30, 17, 7, 'Stoneheart Grave - Horde Defender Quest3'),
+
+(30, 18, 0, 'Snowfall Grave - Alliance Defender Quest0'),
+(30, 18, 1, 'Snowfall Grave - Alliance Defender Quest1'),
+(30, 18, 2, 'Snowfall Grave - Alliance Defender Quest2'),
+(30, 18, 3, 'Snowfall Grave - Alliance Defender Quest3'),
+(30, 18, 4, 'Snowfall Grave - Horde Defender Quest0'),
+(30, 18, 5, 'Snowfall Grave - Horde Defender Quest1'),
+(30, 18, 6, 'Snowfall Grave - Horde Defender Quest2'),
+(30, 18, 7, 'Snowfall Grave - Horde Defender Quest3'),
+
+(30, 19, 0, 'Iceblood Grave - Alliance Defender Quest0'),
+(30, 19, 1, 'Iceblood Grave - Alliance Defender Quest1'),
+(30, 19, 2, 'Iceblood Grave - Alliance Defender Quest2'),
+(30, 19, 3, 'Iceblood Grave - Alliance Defender Quest3'),
+(30, 19, 4, 'Iceblood Grave - Horde Defender Quest0'),
+(30, 19, 5, 'Iceblood Grave - Horde Defender Quest1'),
+(30, 19, 6, 'Iceblood Grave - Horde Defender Quest2'),
+(30, 19, 7, 'Iceblood Grave - Horde Defender Quest3'),
+
+(30, 20, 0, 'Frostwolf Grave - Alliance Defender Quest0'),
+(30, 20, 1, 'Frostwolf Grave - Alliance Defender Quest1'),
+(30, 20, 2, 'Frostwolf Grave - Alliance Defender Quest2'),
+(30, 20, 3, 'Frostwolf Grave - Alliance Defender Quest3'),
+(30, 20, 4, 'Frostwolf Grave - Horde Defender Quest0'),
+(30, 20, 5, 'Frostwolf Grave - Horde Defender Quest1'),
+(30, 20, 6, 'Frostwolf Grave - Horde Defender Quest2'),
+(30, 20, 7, 'Frostwolf Grave - Horde Defender Quest3'),
+
+(30, 21, 0, 'Frostwolf Hut - Alliance Defender Quest0'),
+(30, 21, 1, 'Frostwolf Hut - Alliance Defender Quest1'),
+(30, 21, 2, 'Frostwolf Hut - Alliance Defender Quest2'),
+(30, 21, 3, 'Frostwolf Hut - Alliance Defender Quest3'),
+(30, 21, 4, 'Frostwolf Hut - Horde Defender Quest0'),
+(30, 21, 5, 'Frostwolf Hut - Horde Defender Quest1'),
+(30, 21, 6, 'Frostwolf Hut - Horde Defender Quest2'),
+(30, 21, 7, 'Frostwolf Hut - Horde Defender Quest3'),
+
+(30, 46, 0, 'North Mine - Alliance Boss'),
+(30, 46, 1, 'North Mine - Horde Boss'),
+(30, 46, 2, 'North Mine - Neutral Boss'),
+(30, 47, 0, 'South Mine - Alliance Boss'),
+(30, 47, 1, 'South Mine - Horde Boss'),
+(30, 47, 2, 'South Mine - Neutral Boss'),
+
+(30, 48, 0, 'Alliance Captain'),
+(30, 49, 0, 'Horde Captain'),
+
+(30, 50, 0, 'North Mine - Alliance Control'),
+(30, 50, 1, 'North Mine - Horde Control'),
+(30, 50, 2, 'North Mine - Neutral Control'),
+(30, 51, 0, 'South Mine - Alliance Control'),
+(30, 51, 1, 'South Mine - Horde Control'),
+(30, 51, 2, 'South Mine - Neutral Control'),
+
+(30, 52, 0, 'Alliance Marshal - Dunbaldar South'),
+(30, 53, 0, 'Alliance Marshal - Dunbaldar North'),
+(30, 54, 0, 'Alliance Marshal - Icewing Bunker'),
+(30, 55, 0, 'Alliance Marshal - Stoneheart Bunker'),
+
+(30, 56, 0, 'Horde Marshal - Iceblood Tower'),
+(30, 57, 0, 'Horde Marshal - Towerpoint'),
+(30, 58, 0, 'Horde Marshal - East Frostwolf Tower'),
+(30, 59, 0, 'Horde Marshal - West Frostwolf Tower'),
+
+(30, 60, 0, 'Herald - that guy who yells all the time ;)'),
+
+(30, 61, 0, 'Alliance - Boss'),
+(30, 62, 0, 'Horde - Boss'),
+
+(30, 63, 0, 'Alliance - Captain Dead'),
+(30, 64, 0, 'Horde - Captain Dead');
+/*!40000 ALTER TABLE `battleground_events` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -236,6 +486,7 @@ INSERT INTO `command` VALUES
 ('character level',3,'Syntax: .character level [$playername] [#level]\r\n\r\nSet the level of character with $playername (or the selected if not name provided) by #numberoflevels Or +1 if no #numberoflevels provided). If #numberoflevels is omitted, the level will be increase by 1. If #numberoflevels is 0, the same level will be restarted. If no character is selected and name not provided, increase your level. Command can be used for offline character. All stats and dependent values recalculated. At level decrease talents can be reset if need. Also at level decrease equipped items with greater level requirement can be lost.'),
 ('character rename',2,'Syntax: .character rename [$name]\r\n\r\nMark selected in game or by $name in command character for rename at next login.'),
 ('character reputation',2,'Syntax: .character reputation [$player_name]\r\n\r\nShow reputation information for selected player or player find by $player_name.'),
+('character titles',2,'Syntax: .character titles [$player_name]\r\n\r\nShow known titles list for selected player or player find by $player_name.'),
 ('combatstop',2,'Syntax: .combatstop [$playername]\r\nStop combat for selected character. If selected non-player then command applied to self. If $playername provided then attempt applied to online player $playername.'),
 ('commands',0,'Syntax: .commands\r\n\r\nDisplay a list of available commands for your account level.'),
 ('cooldown',3,'Syntax: .cooldown [#spell_id]\r\n\r\nRemove all (if spell_id not provided) or #spel_id spell cooldown from selected character or you (if no selection).'),
@@ -255,7 +506,7 @@ INSERT INTO `command` VALUES
 ('dismount',0,'Syntax: .dismount\r\n\r\nDismount you, if you are mounted.'),
 ('distance',3,'Syntax: .distance [$name/$link]\r\n\r\nDisplay the distance from your character to the selected creature/player, or player with name $name, or player/creature/gameobject pointed to shift-link with guid.'),
 ('event',2,'Syntax: .event #event_id\r\nShow details about event with #event_id.'),
-('event activelist',2,'Syntax: .event activelist\r\nShow list of currently active events.'),
+('event list',2,'Syntax: .event list\r\nShow list of currently active events.\r\nShow list of all events'),
 ('event start',2,'Syntax: .event start #event_id\r\nStart event #event_id. Set start time for event to current moment (change not saved in DB).'),
 ('event stop',2,'Syntax: .event stop #event_id\r\nStop event #event_id. Set start time for event to time in past that make current moment is event stop time (change not saved in DB).'),
 ('explorecheat',3,'Syntax: .explorecheat #flag\r\n\r\nReveal  or hide all maps for the selected player. If no player is selected, hide or reveal maps to you.\r\n\r\nUse a #flag of value 1 to reveal, use a #flag value of 0 to hide all maps.'),
@@ -297,7 +548,7 @@ INSERT INTO `command` VALUES
 ('honor addkill',2,'Syntax: .honor addkikll\r\n\r\nAdd the targeted unit as one of your pvp kills today (you only get honor if it\'s a racial leader or a player)'),
 ('honor update',2,'Syntax: .honor update\r\n\r\nForce the yesterday\'s honor fields to be updated with today\'s data, which will get reset for the selected player.'),
 ('hover',3,'Syntax: .hover #flag\r\n\r\nEnable or disable hover mode for your character.\r\n\r\nUse a #flag of value 1 to enable, use a #flag value of 0 to disable hover.'),
-('instance unbind',3,'Syntax: .instance unbind all\r\n  All of the selected player\'s binds will be cleared.'),
+('instance unbind',3,'Syntax: .instance unbind all\r\n  All of the selected player\'s binds will be cleared.\r\n.instance unbind #mapid\r\n Only the specified #mapid instance will be cleared.'),
 ('instance listbinds',3,'Syntax: .instance listbinds\r\n  Lists the binds of the selected player.'),
 ('instance stats',3,'Syntax: .instance stats\r\n  Shows statistics about instances.'),
 ('instance savedata',3,'Syntax: .instance savedata\r\n  Save the InstanceData for the current player\'s map to the DB.'),
@@ -334,6 +585,7 @@ INSERT INTO `command` VALUES
 ('lookup spell',3,'Syntax: .lookup spell $namepart\r\n\r\nLooks up a spell by $namepart, and returns all matches with their spell ID\'s.'),
 ('lookup taxinode',3,'Syntax: .lookup taxinode $substring\r\n\r\nSearch and output all taxinodes with provide $substring in name.'),
 ('lookup tele',1,'Syntax: .lookup tele $substring\r\n\r\nSearch and output all .tele command locations with provide $substring in name.'),
+('lookup title',2,'Syntax: .lookup title $$namepart\r\n\r\nLooks up a title by $namepart, and returns all matches with their title ID\'s and index\'s.'),
 ('maxskill',3,'Syntax: .maxskill\r\nSets all skills of the targeted player to their maximum VALUESfor its current level.'),
 ('modify arena',1,'Syntax: .modify arena #value\r\nAdd $amount arena points to the selected player.'),
 ('modify aspeed',1,'Syntax: .modify aspeed #rate\r\n\r\nModify all speeds -run,swim,run back,swim back- of the selected player to \"normalbase speed for this move type\"*rate. If no player is selected, modify your speed.\r\n\r\n #rate may range from 0.1 to 10.'),
@@ -351,12 +603,12 @@ INSERT INTO `command` VALUES
 ('modify mount',1,'Syntax: .modify mount #id #speed\r\nDisplay selected player as mounted at #id creature and set speed to #speed value.'),
 ('modify rage',1,'Syntax: .modify rage #newrage\r\n\r\nModify the rage of the selected player. If no player is selected, modify your rage.'),
 ('modify rep',2,'Syntax: .modify rep #repId (#repvalue | $rankname [#delta])\r\nSets the selected players reputation with faction #repId to #repvalue or to $reprank.\r\nIf the reputation rank name is provided, the resulting reputation will be the lowest reputation for that rank plus the delta amount, if specified.\r\nYou can use \'.pinfo rep\' to list all known reputation ids, or use \'.lookup faction $name\' to locate a specific faction id.'),
-('modify scale',1,''),
+('modify scale',1,'Syntax: .modify scale #scale\r\n\r\nChange model scale for targeted player (util relogin) or creature (until respawn).'),
 ('modify speed',1,'Syntax: .modify speed #rate\r\n.speed #rate\r\n\r\nModify the running speed of the selected player to \"normal base run speed\"*rate. If no player is selected, modify your speed.\r\n\r\n #rate may range from 0.1 to 10.'),
 ('modify spell',1,''),
 ('modify standstate',2,'Syntax: .modify standstate #emoteid\r\n\r\nChange the emote of your character while standing to #emoteid.'),
 ('modify swim',1,'Syntax: .modify swim #rate\r\n\r\nModify the swim speed of the selected player to \"normal swim speed\"*rate. If no player is selected, modify your speed.\r\n\r\n #rate may range from 0.1 to 10.'),
-('modify titles',1,'Syntax: .modify titles #mask\r\n\r\nAllows user to use all titles from #mask.\r\n\r\n #mask=0 disables the title-choose-field'),
+('modify tp',1,'Syntax: .modify tp #amount\r\n\r\nSet free talent pointes for selected character or character\'s pet. It will be reset to default expected at next levelup/login/quest reward.'),
 ('movegens',3,'Syntax: .movegens\r\n  Show movement generators stack for selected creature or player.'),
 ('mute',1,'Syntax: .mute [$playerName] $timeInMinutes\r\n\r\nDisible chat messaging for any character from account of character $playerName (or currently selected) at $timeInMinutes minutes. Player can be offline.'),
 ('namego',1,'Syntax: .namego [$charactername]\r\n\r\nTeleport the given character to you. Character can be offline.'),
@@ -393,6 +645,7 @@ INSERT INTO `command` VALUES
 ('quest add',3,'Syntax: .quest add #quest_id\r\n\r\nAdd to character quest log quest #quest_id. Quest started from item can\'t be added by this command but correct .additem call provided in command output.'),
 ('quest complete',3,'Syntax: .quest complete #questid\r\nMark all quest objectives as completed for target character active quest. After this target character can go and get quest reward.'),
 ('quest remove',3,'Syntax: .quest remove #quest_id\r\n\r\nSet quest #quest_id state to not completed and not active (and remove from active quest list) for selected player.'),
+('quit',4,'Syntax: quit\r\n\r\nClose RA connection. Command must be typed fully (quit).'),
 ('recall',1,'Syntax: .recall [$playername]\r\n\r\nTeleport $playername or selected player to the place where he has been before last use of a teleportation command. If no $playername is entered and no player is selected, it will teleport you.'),
 ('reload all',3,'Syntax: .reload all\r\n\r\nReload all tables with reload support added and that can be _safe_ reloaded.'),
 ('reload all_area',3,'Syntax: .reload all_area\r\n\r\nReload all `areatrigger_*` tables if reload support added for this table and this table can be _safe_ reloaded.'),
@@ -429,7 +682,7 @@ INSERT INTO `command` VALUES
 ('server restart cancel',3,'Syntax: .server restart cancel\r\n\r\nCancel the restart/shutdown timer if any.'),
 ('server set loglevel',4,'Syntax: .server set loglevel #level\r\n\r\nSet server log level (0 - errors only, 1 - basic, 2 - detail, 3 - debug).'),
 ('server set motd',3,'Syntax: .server set motd $MOTD\r\n\r\nSet server Message of the day.'),
-('server shutdown',3,'Syntax: .server shutdown #delay [#exist_code]\r\n\r\nShut the server down after #delay seconds. Use #exist_code or 0 as program exist code.'),
+('server shutdown',3,'Syntax: .server shutdown #delay [#exit_code]\r\n\r\nShut the server down after #delay seconds. Use #exit_code or 0 as program exit code.'),
 ('server shutdown cancel',3,'Syntax: .server shutdown cancel\r\n\r\nCancel the restart/shutdown timer if any.'),
 ('setskill',3,'Syntax: .setskill #skill #level [#max]\r\n\r\nSet a skill of id #skill with a current skill value of #level and a maximum value of #max (or equal current maximum if not provide) for the selected character. If no character is selected, you learn the skill.'),
 ('showarea',3,'Syntax: .showarea #areaid\r\n\r\nReveal the area of #areaid to the selected character. If no character is selected, reveal this area to you.'),
@@ -441,6 +694,10 @@ INSERT INTO `command` VALUES
 ('tele group',1,'Syntax: .tele group#location\r\n\r\nTeleport a selected player and his group members to a given location.'),
 ('tele name',1,'Syntax: .tele name [#playername] #location\r\n\r\nTeleport the given character to a given location. Character can be offline.'),
 ('ticket',2,'Syntax: .ticket on\r\n        .ticket off\r\n        .ticket #num\r\n        .ticket $character_name\r\n\r\non/off for GMs to show or not a new ticket directly, $character_name to show ticket of this character, #num to show ticket #num.'),
+('titles add',2,'Syntax: .titles add #title\r\nAdd title #title (id or shift-link) to known titles list for selected player.'),
+('titles current',2,'Syntax: .titles current #title\r\nSet title #title (id or shift-link) as current selected titl for selected player. If title not in known title list for player then it will be added to list.'),
+('titles remove',2,'Syntax: .titles remove #title\r\nRemove title #title (id or shift-link) from known titles list for selected player.'),
+('titles setmask',2,'Syntax: .titles setmask #mask\r\n\r\nAllows user to use all titles from #mask.\r\n\r\n #mask=0 disables the title-choose-field'),
 ('unaura',3,'Syntax: .unaura #spellid\r\n\r\nRemove aura due to spell #spellid from the selected Unit.'),
 ('unban account',3,'Syntax: .unban account $Name\r\nUnban accounts for account name pattern.'),
 ('unban character',3,'Syntax: .unban character $Name\r\nUnban accounts for character name pattern.'),
@@ -521,6 +778,28 @@ LOCK TABLES `creature_addon` WRITE;
 /*!40000 ALTER TABLE `creature_addon` DISABLE KEYS */;
 /*!40000 ALTER TABLE `creature_addon` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `creature_battleground`
+--
+
+DROP TABLE IF EXISTS `creature_battleground`;
+CREATE TABLE `creature_battleground` (
+    `guid` int(10) unsigned NOT NULL COMMENT 'Creature\'s GUID',
+    `event1` tinyint(3) unsigned NOT NULL COMMENT 'main event',
+    `event2` tinyint(3) unsigned NOT NULL COMMENT 'sub event',
+    PRIMARY KEY  (`guid`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Creature battleground indexing system';
+
+--
+-- Dumping data for table `creature_battleground`
+--
+
+LOCK TABLES `creature_battleground` WRITE;
+/*!40000 ALTER TABLE `creature_battleground` DISABLE KEYS */;
+/*!40000 ALTER TABLE `creature_battleground` ENABLE KEYS */;
+UNLOCK TABLES;
+
 
 --
 -- Table structure for table `creature_equip_template`
@@ -742,6 +1021,7 @@ CREATE TABLE `creature_template` (
   `name` char(100) NOT NULL default '0',
   `subname` char(100) default NULL,
   `IconName` char(100) default NULL,
+  `gossip_menu_id` mediumint(8) unsigned NOT NULL default '0',
   `minlevel` tinyint(3) unsigned NOT NULL default '1',
   `maxlevel` tinyint(3) unsigned NOT NULL default '1',
   `minhealth` int(10) unsigned NOT NULL default '0',
@@ -810,7 +1090,7 @@ CREATE TABLE `creature_template` (
 LOCK TABLES `creature_template` WRITE;
 /*!40000 ALTER TABLE `creature_template` DISABLE KEYS */;
 INSERT INTO `creature_template` VALUES
-(1,1,0,0,10045,0,10045,0,'Waypoint(Only GM can see it)','Visual',NULL,1,1,64,64,0,0,0,35,35,0,0.91,1,0,14,15,0,100,2000,2200,4096,0,0,0,0,0,0,1.76,2.42,100,8,5242886,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,1.0,1.0,0,1,0,0,0x82,'');
+(1,1,0,0,10045,0,10045,0,'Waypoint(Only GM can see it)','Visual',NULL,0,1,1,64,64,0,0,0,35,35,0,0.91,1,0,14,15,0,100,2000,2200,4096,0,0,0,0,0,0,1.76,2.42,100,8,5242886,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,1.0,1.0,0,1,0,0,0x82,'');
 /*!40000 ALTER TABLE `creature_template` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -980,7 +1260,7 @@ CREATE TABLE `creature_ai_texts` (
   `sound` mediumint(8) unsigned NOT NULL DEFAULT '0',
   `type` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `language` tinyint(3) unsigned NOT NULL DEFAULT '0',
-  `emote` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `emote` smallint(5) unsigned NOT NULL DEFAULT '0',
   `comment` text,
   PRIMARY KEY (`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Script Texts';
@@ -1359,6 +1639,27 @@ LOCK TABLES `gameobject` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `gameobject_battleground`
+--
+
+DROP TABLE IF EXISTS `gameobject_battleground`;
+CREATE TABLE `gameobject_battleground` (
+    `guid` int(10) unsigned NOT NULL COMMENT 'GameObject\'s GUID',
+    `event1` tinyint(3) unsigned NOT NULL COMMENT 'main event',
+    `event2` tinyint(3) unsigned NOT NULL COMMENT 'sub event',
+    PRIMARY KEY  (`guid`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='GameObject battleground indexing system';
+
+--
+-- Dumping data for table `gameobject_battleground`
+--
+
+LOCK TABLES `gameobject_battleground` WRITE;
+/*!40000 ALTER TABLE `gameobject_battleground` DISABLE KEYS */;
+/*!40000 ALTER TABLE `gameobject_battleground` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `gameobject_involvedrelation`
 --
 
@@ -1523,6 +1824,115 @@ CREATE TABLE `gameobject_template` (
 LOCK TABLES `gameobject_template` WRITE;
 /*!40000 ALTER TABLE `gameobject_template` DISABLE KEYS */;
 /*!40000 ALTER TABLE `gameobject_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `gossip_menu`
+--
+
+DROP TABLE IF EXISTS gossip_menu;
+CREATE TABLE gossip_menu (
+  entry smallint(6) unsigned NOT NULL default '0',
+  text_id mediumint(8) unsigned NOT NULL default '0',
+  cond_1 tinyint(3) unsigned NOT NULL default '0',
+  cond_1_val_1 mediumint(8) unsigned NOT NULL default '0',
+  cond_1_val_2 mediumint(8) unsigned NOT NULL default '0',
+  cond_2 tinyint(3) unsigned NOT NULL default '0',
+  cond_2_val_1 mediumint(8) unsigned NOT NULL default '0',
+  cond_2_val_2 mediumint(8) unsigned NOT NULL default '0',
+  PRIMARY KEY (entry, text_id)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `gossip_menu`
+--
+
+LOCK TABLES `gossip_menu` WRITE;
+/*!40000 ALTER TABLE `gossip_menu` DISABLE KEYS */;
+/*!40000 ALTER TABLE `gossip_menu` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `gossip_menu_option`
+--
+
+DROP TABLE IF EXISTS gossip_menu_option;
+CREATE TABLE gossip_menu_option (
+  menu_id smallint(6) unsigned NOT NULL default '0',
+  id smallint(6) unsigned NOT NULL default '0',
+  option_icon mediumint(8) unsigned NOT NULL default '0',
+  option_text text,
+  option_id tinyint(3) unsigned NOT NULL default '0',
+  npc_option_npcflag int(10) unsigned NOT NULL default '0',
+  action_menu_id mediumint(8) unsigned NOT NULL default '0',
+  action_poi_id mediumint(8) unsigned NOT NULL default '0',
+  action_script_id mediumint(8) unsigned NOT NULL default '0',
+  box_coded tinyint(3) unsigned NOT NULL default '0',
+  box_money int(11) unsigned NOT NULL default '0',
+  box_text text,
+  cond_1 tinyint(3) unsigned NOT NULL default '0',
+  cond_1_val_1 mediumint(8) unsigned NOT NULL default '0',
+  cond_1_val_2 mediumint(8) unsigned NOT NULL default '0',
+  cond_2 tinyint(3) unsigned NOT NULL default '0',
+  cond_2_val_1 mediumint(8) unsigned NOT NULL default '0',
+  cond_2_val_2 mediumint(8) unsigned NOT NULL default '0',
+  cond_3 tinyint(3) unsigned NOT NULL default '0',
+  cond_3_val_1 mediumint(8) unsigned NOT NULL default '0',
+  cond_3_val_2 mediumint(8) unsigned NOT NULL default '0',
+  PRIMARY KEY (menu_id, id)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `gossip_menu_option`
+--
+
+LOCK TABLES `gossip_menu_option` WRITE;
+/*!40000 ALTER TABLE `gossip_menu_option` DISABLE KEYS */;
+INSERT INTO gossip_menu_option VALUES
+(0,0,0,'GOSSIP_OPTION_QUESTGIVER',2,2,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,1,1,'GOSSIP_OPTION_VENDOR',3,128,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,2,2,'GOSSIP_OPTION_TAXIVENDOR',4,8192,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,3,3,'GOSSIP_OPTION_TRAINER',5,16,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,4,4,'GOSSIP_OPTION_SPIRITHEALER',6,16384,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,5,4,'GOSSIP_OPTION_SPIRITGUIDE',7,32768,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,6,5,'GOSSIP_OPTION_INNKEEPER',8,65536,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,7,6,'GOSSIP_OPTION_BANKER',9,131072,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,8,7,'GOSSIP_OPTION_PETITIONER',10,262144,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,9,8,'GOSSIP_OPTION_TABARDDESIGNER',11,524288,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,10,9,'GOSSIP_OPTION_BATTLEFIELD',12,1048576,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,11,6,'GOSSIP_OPTION_AUCTIONEER',13,2097152,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,12,0,'GOSSIP_OPTION_STABLEPET',14,4194304,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,13,1,'GOSSIP_OPTION_ARMORER',15,4096,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,14,2,'GOSSIP_OPTION_UNLEARNTALENTS',16,16,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0),
+(0,15,2,'GOSSIP_OPTION_UNLEARNPETSKILLS',17,16,0,0,0,0,0,NULL,0,0,0,0,0,0,0,0,0);
+/*!40000 ALTER TABLE `gossip_menu_option` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `gossip_scripts`
+--
+
+DROP TABLE IF EXISTS `gossip_scripts`;
+CREATE TABLE `gossip_scripts` (
+  `id` mediumint(8) unsigned NOT NULL default '0',
+  `delay` int(10) unsigned NOT NULL default '0',
+  `command` mediumint(8) unsigned NOT NULL default '0',
+  `datalong` mediumint(8) unsigned NOT NULL default '0',
+  `datalong2` int(10) unsigned NOT NULL default '0',
+  `dataint` int(11) NOT NULL default '0',
+  `x` float NOT NULL default '0',
+  `y` float NOT NULL default '0',
+  `z` float NOT NULL default '0',
+  `o` float NOT NULL default '0'
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `gossip_scripts`
+--
+
+LOCK TABLES `gossip_scripts` WRITE;
+/*!40000 ALTER TABLE `gossip_scripts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `gossip_scripts` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1954,6 +2364,42 @@ LOCK TABLES `locales_gameobject` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `locales_gossip_menu_option`
+--
+
+DROP TABLE IF EXISTS `locales_gossip_menu_option`;
+CREATE TABLE `locales_gossip_menu_option` (
+  `menu_id` smallint(6) unsigned NOT NULL default '0',
+  `id` smallint(6) unsigned NOT NULL default '0',
+  `option_text_loc1` text,
+  `option_text_loc2` text,
+  `option_text_loc3` text,
+  `option_text_loc4` text,
+  `option_text_loc5` text,
+  `option_text_loc6` text,
+  `option_text_loc7` text,
+  `option_text_loc8` text,
+  `box_text_loc1` text,
+  `box_text_loc2` text,
+  `box_text_loc3` text,
+  `box_text_loc4` text,
+  `box_text_loc5` text,
+  `box_text_loc6` text,
+  `box_text_loc7` text,
+  `box_text_loc8` text,
+  PRIMARY KEY  (`menu_id`, `id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `locales_gossip_menu_option`
+--
+
+LOCK TABLES `locales_gossip_menu_option` WRITE;
+/*!40000 ALTER TABLE `locales_gossip_menu_option` DISABLE KEYS */;
+/*!40000 ALTER TABLE `locales_gossip_menu_option` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `locales_item`
 --
 
@@ -1986,42 +2432,6 @@ CREATE TABLE `locales_item` (
 LOCK TABLES `locales_item` WRITE;
 /*!40000 ALTER TABLE `locales_item` DISABLE KEYS */;
 /*!40000 ALTER TABLE `locales_item` ENABLE KEYS */;
-UNLOCK TABLES;
-
-
---
--- Table structure for table `locales_npc_option`
---
-
-DROP TABLE IF EXISTS `locales_npc_option`;
-CREATE TABLE `locales_npc_option` (
-  `entry` mediumint(8) unsigned NOT NULL default '0',
-  `option_text_loc1` text,
-  `option_text_loc2` text,
-  `option_text_loc3` text,
-  `option_text_loc4` text,
-  `option_text_loc5` text,
-  `option_text_loc6` text,
-  `option_text_loc7` text,
-  `option_text_loc8` text,
-  `box_text_loc1` text,
-  `box_text_loc2` text,
-  `box_text_loc3` text,
-  `box_text_loc4` text,
-  `box_text_loc5` text,
-  `box_text_loc6` text,
-  `box_text_loc7` text,
-  `box_text_loc8` text,
-  PRIMARY KEY  (`entry`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
---
--- Dumping data for table `locales_npc_option`
---
-
-LOCK TABLES `locales_npc_option` WRITE;
-/*!40000 ALTER TABLE `locales_npc_option` DISABLE KEYS */;
-/*!40000 ALTER TABLE `locales_npc_option` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -2199,6 +2609,33 @@ LOCK TABLES `locales_page_text` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `locales_points_of_interest`
+--
+
+DROP TABLE IF EXISTS `locales_points_of_interest`;
+CREATE TABLE `locales_points_of_interest` (
+  `entry` mediumint(8) unsigned NOT NULL default '0',
+  `icon_name_loc1` text,
+  `icon_name_loc2` text,
+  `icon_name_loc3` text,
+  `icon_name_loc4` text,
+  `icon_name_loc5` text,
+  `icon_name_loc6` text,
+  `icon_name_loc7` text,
+  `icon_name_loc8` text,
+  PRIMARY KEY  (`entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `locales_points_of_interest`
+--
+
+LOCK TABLES `locales_points_of_interest` WRITE;
+/*!40000 ALTER TABLE `locales_points_of_interest` DISABLE KEYS */;
+/*!40000 ALTER TABLE `locales_points_of_interest` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `locales_quest`
 --
 
@@ -2298,6 +2735,33 @@ LOCK TABLES `locales_quest` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `mail_loot_template`
+--
+
+DROP TABLE IF EXISTS `mail_loot_template`;
+CREATE TABLE `mail_loot_template` (
+  `entry` mediumint(8) unsigned NOT NULL default '0',
+  `item` mediumint(8) unsigned NOT NULL default '0',
+  `ChanceOrQuestChance` float NOT NULL default '100',
+  `groupid` tinyint(3) unsigned NOT NULL default '0',
+  `mincountOrRef` mediumint(9) NOT NULL default '1',
+  `maxcount` tinyint(3) unsigned NOT NULL default '1',
+  `lootcondition` tinyint(3) unsigned NOT NULL default '0',
+  `condition_value1` mediumint(8) unsigned NOT NULL default '0',
+  `condition_value2` mediumint(8) unsigned NOT NULL default '0',
+  PRIMARY KEY  (`entry`,`item`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Loot System';
+
+--
+-- Dumping data for table `mail_loot_template`
+--
+
+LOCK TABLES `mail_loot_template` WRITE;
+/*!40000 ALTER TABLE `mail_loot_template` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mail_loot_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `mangos_string`
 --
 
@@ -2382,6 +2846,9 @@ INSERT INTO `mangos_string` VALUES
 (57,'Using World DB: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (58,'Using script library: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (59,'Using creature EventAI: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(60,'I\'m busy right now, come back later.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(61,'Username: ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(62,'Password: ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (100,'Global notify: ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (101,'Map: %u (%s) Zone: %u (%s) Area: %u (%s)\nX: %f Y: %f Z: %f Orientation: %f\ngrid[%u,%u]cell[%u,%u] InstanceID: %u\n ZoneX: %f ZoneY: %f\nGroundZ: %f FloorZ: %f Have height data (Map: %u VMap: %u)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (102,'%s is already being teleported.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2600,6 +3067,15 @@ INSERT INTO `mangos_string` VALUES
 (343,'Creature (Entry: %u) cannot be tamed.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (344,'You already have pet.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (347,'TaxiNode ID %u not found!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(348,'Game Object (Entry: %u) have invalid data and can\'t be spawned',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(349,'%d (idx:%d) - |cffffffff|Htitle:%d|h[%s %s]|h|r %s %s ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(350,'%d (idx:%d) - [%s %s] %s %s ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(351,'No titles found!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(352,'Invalid title id: %u',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(353,'Title %u (%s) added to known titles list for player %s.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(354,'Title %u (%s) removed from known titles list for player %s.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(355,'Title %u (%s) set as current selected title for player %s.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(356,'Current selected title for player %s reset as not known now.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (400,'|cffff0000[System Message]:|rScripts reloaded',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (401,'You change security level of account %s to %i.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (402,'%s changed your security level to %i.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2721,7 +3197,7 @@ INSERT INTO `mangos_string` VALUES
 (519,'|cffffffff|Htele:%s|h[%s]|h|r ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (520,'%d - |cffffffff|Hspell:%d|h[%s]|h|r ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (521,'%d - |cffffffff|Hskill:%d|h[%s %s]|h|r %s %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(522,'Game Object (GUID: %u) not found',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(522,'Game Object (Entry: %u) not found',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (523,'>> Game Object %s (GUID: %u) at %f %f %f. Orientation %f.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (524,'Selected object:\n|cffffffff|Hgameobject:%d|h[%s]|h|r GUID: %u ID: %u\nX: %f Y: %f Z: %f MapId: %u\nOrientation: %f',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (525,'>> Add Game Object \'%i\' (%s) (GUID: %i) added at \'%f %f %f\'.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2772,8 +3248,6 @@ INSERT INTO `mangos_string` VALUES
 (570,'The uint32 value of %u in %u is: %u',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (571,'Get %u float Value:[OPCODE]:%u [VALUE]:%f',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (572,'The float of %u value in %u is: %f',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(573,'.Set32Bit:[OPCODE]:%u [VALUE]:%u',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
-(574,'You set Bit of Field:%u to Value: %u',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (575,'.Mod32Value:[OPCODE]:%u [VALUE]:%i',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (576,'You modified the value of Field:%u to Value: %u',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (577,'You are now invisible.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2880,6 +3354,46 @@ INSERT INTO `mangos_string` VALUES
 (744,'Modifying played count, arena points etc. for loaded arena teams, sending updated stats to online players...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (745,'Modification done.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (746,'Done flushing Arena points.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(750,'Not enough players. This game will close in %u mins.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(751,'Not enough players. This game will close in %u seconds.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(752,'Only the Alliance can use that portal',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(753,'Only the Horde can use that portal',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(754,'The battle for Arathi Basin begins in 2 minutes.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(755,'The battle begins in 2 minutes.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(757,'Alliance',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(758,'Horde',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(759,'%s was destroyed by the %s!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(760,'The %s is under attack! If left unchecked, the %s will destroy it!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(761,'The %s was taken by the %s!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(762,'The %s was taken by the %s!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(763,'The %s was taken by the %s!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(764,'The %s is under attack! If left unchecked, the %s will capture it!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(765,'The %s has taken the %s! Its supplies will now be used for reinforcements!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(766,'Irondeep Mine',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(767,'Coldtooth Mine',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(768,'Stormpike Aid Station',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(769,'Dun Baldar South Bunker',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(770,'Dun Baldar North Bunker',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(771,'Stormpike Graveyard',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(772,'Icewing Bunker',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(773,'Stonehearth Graveyard',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(774,'Stonehearth Bunker',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(775,'Snowfall Graveyard',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(776,'Iceblood Tower',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(777,'Iceblood Graveyard',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(778,'Tower Point',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(779,'Frostwolf Graveyard',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(780,'East Frostwolf Tower',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(781,'West Frostwolf Tower',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(782,'Frostwolf Relief Hut',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(783,'2 minutes until the battle for Alterac Valley begins.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(784,'1 minute until the battle for Alterac Valley begins.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(785,'30 seconds until the battle for Alterac Valley begins. Prepare yourselves!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(786,'The battle for Alterac Valley has begun!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(787,'The Alliance Team is running out of reinforcements!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(788,'The Horde Team is running out of reinforcements!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(789,'The Frostwolf General is Dead!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(790,'The Stormpike General is Dead!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (801,'You do not have enough gold',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (802,'You do not have enough free slots',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (803,'Your partner does not have enough free bag slots',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2909,6 +3423,7 @@ INSERT INTO `mangos_string` VALUES
 (1012,'===========================================================================',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1013,'|%15s| %20s | %15s |%4d| %9d |',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1014,'No online players.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(1015,'Used not fully typed quit command, need type it fully (quit), or command used not in RA command line.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1100,'Account %s (Id: %u) have up to %u expansion allowed now.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1101,'Message of the day changed to:\r\n%s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1102,'Message sent to %s: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
@@ -2934,6 +3449,8 @@ INSERT INTO `mangos_string` VALUES
 (1122,'(%u/%u +perm %u +temp %u)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1128,'%d - |cffffffff|Htaxinode:%u|h[%s %s]|h|r (Map:%u X:%f Y:%f Z:%f)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1129,'%d - %s %s (Map:%u X:%f Y:%f Z:%f)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(1130,'event started %u "%s"',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(1131,'event stopped %u "%s"',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (1200,'You try to view cinemitic %u but it doesn\'t exist.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `mangos_string` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -2956,54 +3473,6 @@ CREATE TABLE `npc_gossip` (
 LOCK TABLES `npc_gossip` WRITE;
 /*!40000 ALTER TABLE `npc_gossip` DISABLE KEYS */;
 /*!40000 ALTER TABLE `npc_gossip` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `npc_gossip_textid`
---
-
-DROP TABLE IF EXISTS `npc_gossip_textid`;
-CREATE TABLE `npc_gossip_textid` (
-  `zoneid` smallint(5) unsigned NOT NULL default '0',
-  `action` smallint(5) unsigned NOT NULL default '0',
-  `textid` mediumint(8) unsigned NOT NULL default '0',
-  KEY `zoneid` (`zoneid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
---
--- Dumping data for table `npc_gossip_textid`
---
-
-LOCK TABLES `npc_gossip_textid` WRITE;
-/*!40000 ALTER TABLE `npc_gossip_textid` DISABLE KEYS */;
-/*!40000 ALTER TABLE `npc_gossip_textid` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `npc_option`
---
-
-DROP TABLE IF EXISTS `npc_option`;
-CREATE TABLE `npc_option` (
-  `id` mediumint(8) unsigned NOT NULL default '0',
-  `gossip_id` mediumint(8) unsigned NOT NULL default '0',
-  `npcflag` int(10) unsigned NOT NULL default '0',
-  `icon` tinyint(3) unsigned NOT NULL default '0',
-  `action` mediumint(8) unsigned NOT NULL default '0',
-  `box_money` int(10) unsigned NOT NULL default '0',
-  `coded` tinyint(3) unsigned NOT NULL default '0',
-  `option_text` text,
-  `box_text` text,
-  PRIMARY KEY  (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
---
--- Dumping data for table `npc_option`
---
-
-LOCK TABLES `npc_option` WRITE;
-/*!40000 ALTER TABLE `npc_option` DISABLE KEYS */;
-/*!40000 ALTER TABLE `npc_option` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -10241,6 +10710,31 @@ INSERT INTO `playercreateinfo_spell` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `points_of_interest`
+--
+
+DROP TABLE IF EXISTS `points_of_interest`;
+CREATE TABLE `points_of_interest` (
+  `entry` mediumint(8) unsigned NOT NULL default '0',
+  `x` float NOT NULL default '0',
+  `y` float NOT NULL default '0',
+  `icon` mediumint(8) unsigned NOT NULL default '0',
+  `flags` mediumint(8) unsigned NOT NULL default '0',
+  `data` mediumint(8) unsigned NOT NULL default '0',
+  `icon_name` text NOT NULL,
+  PRIMARY KEY  (`entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `points_of_interest`
+--
+
+LOCK TABLES `points_of_interest` WRITE;
+/*!40000 ALTER TABLE `points_of_interest` DISABLE KEYS */;
+/*!40000 ALTER TABLE `points_of_interest` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `pool_creature`
 --
 
@@ -10429,33 +10923,6 @@ CREATE TABLE `quest_start_scripts` (
 LOCK TABLES `quest_start_scripts` WRITE;
 /*!40000 ALTER TABLE `quest_start_scripts` DISABLE KEYS */;
 /*!40000 ALTER TABLE `quest_start_scripts` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `quest_mail_loot_template`
---
-
-DROP TABLE IF EXISTS `quest_mail_loot_template`;
-CREATE TABLE `quest_mail_loot_template` (
-  `entry` mediumint(8) unsigned NOT NULL default '0',
-  `item` mediumint(8) unsigned NOT NULL default '0',
-  `ChanceOrQuestChance` float NOT NULL default '100',
-  `groupid` tinyint(3) unsigned NOT NULL default '0',
-  `mincountOrRef` mediumint(9) NOT NULL default '1',
-  `maxcount` tinyint(3) unsigned NOT NULL default '1',
-  `lootcondition` tinyint(3) unsigned NOT NULL default '0',
-  `condition_value1` mediumint(8) unsigned NOT NULL default '0',
-  `condition_value2` mediumint(8) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`entry`,`item`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Loot System';
-
---
--- Dumping data for table `quest_mail_loot_template`
---
-
-LOCK TABLES `quest_mail_loot_template` WRITE;
-/*!40000 ALTER TABLE `quest_mail_loot_template` DISABLE KEYS */;
-/*!40000 ALTER TABLE `quest_mail_loot_template` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -14275,6 +14742,8 @@ INSERT INTO `spell_proc_event` VALUES
 (8288,0,0,0,0,0x0000000000000000,0x00000004,0,0),
 (8289,0,0,0,0,0x0000000000000000,0x00000004,0,0),
 (8397,0,0,0,0,0x0000000000000000,0x00000002,0,0),
+(8494,0,0,0,0,0x0000000000000000,0x00100402,0,0),
+(8495,0,0,0,0,0x0000000000000000,0x00100402,0,0),
 (8601,0,0,0,0,0x0000000000000000,0x00000001,0,0),
 (8612,0,0,0,0,0x0000000000000000,0x00000002,0,0),
 (8788,0,0,0,0,0x0000000000000000,0x00000402,0,0),
@@ -14294,6 +14763,9 @@ INSERT INTO `spell_proc_event` VALUES
 (9799,0,0,0,0,0x0000000000000000,0x00040000,0,0),
 (10022,0,0,0,0,0x0000000000000000,0x00000001,0,0),
 (10092,0,0,0,0,0x0000000000000000,0x00000080,0,0),
+(10191,0,0,0,0,0x0000000000000000,0x00100402,0,0),
+(10192,0,0,0,0,0x0000000000000000,0x00100402,0,0),
+(10193,0,0,0,0,0x0000000000000000,0x00100402,0,0),
 (10219,0,0,0,0,0x0000000000000000,0x00000002,0,0),
 (10220,0,0,0,0,0x0000000000000000,0x00000002,0,0),
 (10425,0,0,0,0,0x0000000000000000,0x00100402,0,0),
@@ -14779,6 +15251,7 @@ INSERT INTO `spell_proc_event` VALUES
 (27009,0,0,0,0,0x0000000000000000,0x00000002,0,0),
 (27044,0,0,0,0,0x0000000000000000,0x00080000,0,0),
 (27124,0,0,0,0,0x0000000000000000,0x00000002,0,0),
+(27131,0,0,0,0,0x0000000000000000,0x00100402,0,0),
 (27155,0,0,0,0,0x0000000000000000,0x00000001,0,0),
 (27160,0,0,0,0,0x0000000000000000,0x00000001,20,0),
 (27162,0,0,0,0,0x0000000000000000,0x00000002,0,0),

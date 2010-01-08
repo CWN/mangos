@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -298,7 +298,7 @@ bool EffectDummyItem(Unit *caster, uint32 spellId, uint32 effIndex, Item *itemTa
 void ScriptedAI::UpdateAI(const uint32)
 {
     //Check if we have a current target
-    if( m_creature->isAlive() && m_creature->SelectHostilTarget() && m_creature->getVictim())
+    if( m_creature->isAlive() && m_creature->SelectHostileTarget() && m_creature->getVictim())
     {
         //If we are within range melee the target
         if( m_creature->IsWithinDistInMap(m_creature->getVictim(), ATTACK_DISTANCE))

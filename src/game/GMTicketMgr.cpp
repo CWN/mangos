@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ void GMTicketMgr::DeleteAll()
 {
     for(GMTicketMap::const_iterator itr = m_GMTicketMap.begin(); itr != m_GMTicketMap.end(); ++itr)
     {
-        if(Player* owner = objmgr.GetPlayer(MAKE_NEW_GUID(itr->first,0,HIGHGUID_PLAYER)))
+        if(Player* owner = sObjectMgr.GetPlayer(MAKE_NEW_GUID(itr->first,0,HIGHGUID_PLAYER)))
             owner->GetSession()->SendGMTicketGetTicket(0x0A,0);
     }
     CharacterDatabase.PExecute("DELETE FROM character_ticket");

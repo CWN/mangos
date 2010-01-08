@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,13 +91,24 @@ struct PlayerSpell
 // Spell modifier (used for modify other spells)
 struct SpellModifier
 {
+    SpellModifier() : charges(0), lastAffected(NULL) {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, uint32 _spellId, uint64 _mask, int16 _charges = 0)
+        : op(_op), type(_type), charges(_charges), value(_value), mask(_mask), spellId(_spellId), lastAffected(NULL)
+    {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, SpellEntry const* spellEntry, uint8 eff, int16 _charges = 0);
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, Aura const* aura, int16 _charges = 0);
+
+    bool isAffectedOnSpell(SpellEntry const *spell) const;
+
     SpellModOp   op   : 8;
     SpellModType type : 8;
     int16 charges     : 16;
     int32 value;
     uint64 mask;
     uint32 spellId;
-    uint32 effectId;
     Spell const* lastAffected;
 };
 
@@ -154,7 +165,7 @@ struct ActionButton
     void SetActionAndType(uint32 action, ActionButtonType type)
     {
         uint32 newData = action | (uint32(type) << 24);
-        if (newData != packedData)
+        if (newData != packedData || uState == ACTIONBUTTON_DELETED)
         {
             packedData = newData;
             if (uState != ACTIONBUTTON_NEW)
@@ -883,8 +894,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SendInstanceResetWarning(uint32 mapid, uint32 time);
 
         Creature* GetNPCIfCanInteractWith(uint64 guid, uint32 npcflagmask);
-        bool CanInteractWithNPCs(bool alive = true) const;
-        GameObject* GetGameObjectIfCanInteractWith(uint64 guid, GameobjectTypes type) const;
+        GameObject* GetGameObjectIfCanInteractWith(uint64 guid, uint32 gameobject_type = MAX_GAMEOBJECT_TYPE) const;
+
+        void UpdateVisibilityForPlayer();
 
         bool ToggleAFK();
         bool ToggleDND();
@@ -956,7 +968,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void RemoveMiniPet();
         Pet* GetMiniPet();
         void SetMiniPet(Pet* pet) { m_miniPet = pet->GetGUID(); }
-        void Uncharm();
 
         void Say(const std::string& text, const uint32 language);
         void Yell(const std::string& text, const uint32 language);
@@ -975,7 +986,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         Item* GetItemByGuid( uint64 guid ) const;
         Item* GetItemByPos( uint16 pos ) const;
         Item* GetItemByPos( uint8 bag, uint8 slot ) const;
-        Item* GetWeaponForAttack(WeaponAttackType attackType, bool useable = false) const;
+        Item* GetWeaponForAttack(WeaponAttackType attackType) const { return GetWeaponForAttack(attackType,false,false); }
+        Item* GetWeaponForAttack(WeaponAttackType attackType, bool nonbroken, bool useable) const;
         Item* GetShield(bool useable = false) const;
         static uint32 GetAttackBySlot( uint8 slot );        // MAX_ATTACK if not weapon slot
         std::vector<Item *> &GetItemUpdateQueue() { return m_itemUpdateQueue; }
@@ -986,8 +998,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         static bool IsBagPos( uint16 pos );
         static bool IsBankPos( uint16 pos ) { return IsBankPos(pos >> 8,pos & 255); }
         static bool IsBankPos( uint8 bag, uint8 slot );
-        bool IsValidPos( uint16 pos ) { return IsBankPos(pos >> 8,pos & 255); }
-        bool IsValidPos( uint8 bag, uint8 slot );
+        bool IsValidPos( uint16 pos, bool explicit_pos ) { return IsValidPos(pos >> 8, pos & 255, explicit_pos); }
+        bool IsValidPos( uint8 bag, uint8 slot, bool explicit_pos );
         uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
         void SetBankBagSlotCount(uint8 count) { SetByteValue(PLAYER_BYTES_2, 2, count); }
         bool HasItemCount( uint32 item, uint32 count, bool inBankAlso = false ) const;
@@ -1102,6 +1114,18 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint32 m_stableSlots;
 
         /*********************************************************/
+        /***                    GOSSIP SYSTEM                  ***/
+        /*********************************************************/
+
+        void PrepareGossipMenu(WorldObject *pSource, uint32 menuId = 0);
+        void SendPreparedGossip(WorldObject *pSource);
+        void OnGossipSelect(WorldObject *pSource, uint32 gossipListId, uint32 menuId);
+
+        uint32 GetGossipTextId(uint32 menuId);
+        uint32 GetGossipTextId(WorldObject *pSource);
+        uint32 GetDefaultGossipMenuForSource(WorldObject *pSource);
+
+        /*********************************************************/
         /***                    QUEST SYSTEM                   ***/
         /*********************************************************/
 
@@ -1122,6 +1146,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void CompleteQuest( uint32 quest_id );
         void IncompleteQuest( uint32 quest_id );
         void RewardQuest( Quest const *pQuest, uint32 reward, Object* questGiver, bool announce = true );
+
         void FailQuest( uint32 quest_id );
         bool SatisfyQuestSkillOrClass( Quest const* qInfo, bool msg );
         bool SatisfyQuestLevel( Quest const* qInfo, bool msg );
@@ -1239,6 +1264,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         bool m_mailsLoaded;
         bool m_mailsUpdated;
 
+        void SendPetTameFailure(PetTameFailureReason reason);
+
         void SetBindPoint(uint64 guid);
         void SendTalentWipeConfirm(uint64 guid);
         void RewardRage( uint32 damage, uint32 weaponSpeedHitFactor, bool attacker );
@@ -1287,7 +1314,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         QuestStatusMap& getQuestStatusMap() { return mQuestStatus; };
 
         const uint64& GetSelection( ) const { return m_curSelection; }
-        void SetSelection(const uint64 &guid) { m_curSelection = guid; SetUInt64Value(UNIT_FIELD_TARGET, guid); }
+        void SetSelection(const uint64 &guid) { m_curSelection = guid; SetTargetGUID(guid); }
 
         uint8 GetComboPoints() { return m_comboPoints; }
         const uint64& GetComboTarget() const { return m_comboTarget; }
@@ -1436,6 +1463,7 @@ class MANGOS_DLL_SPEC Player : public Unit
             m_cinematic = cine;
         }
 
+        static bool IsActionButtonDataValid(uint8 button, uint32 action, uint8 type, Player* player);
         ActionButton* addActionButton(uint8 button, uint32 action, uint8 type);
         void removeActionButton(uint8 button);
         void SendInitialActionButtons() const;
@@ -1652,6 +1680,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         static uint32 getFactionForRace(uint8 race);
         void setFactionForRace(uint8 race);
 
+        void InitDisplayIds();
+
         bool IsAtGroupRewardDistance(WorldObject const* pRewardSource) const;
         bool RewardPlayerAndGroupAtKill(Unit* pVictim);
         void RewardPlayerAndGroupAtEvent(uint32 creature_id,WorldObject* pRewardSource);
@@ -1842,7 +1872,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         void ClearAfkReports() { m_bgAfkReporter.clear(); }
 
         bool GetBGAccessByLevel(BattleGroundTypeId bgTypeId) const;
-        bool isAllowUseBattleGroundObject();
+        bool CanUseBattleGroundObject();
+        bool CanCaptureTowerPoint();
 
         /*********************************************************/
         /***                    REST SYSTEM                    ***/
@@ -1857,7 +1888,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         /***              ENVIROMENTAL SYSTEM                  ***/
         /*********************************************************/
 
-        void EnvironmentalDamage(EnviromentalDamage type, uint32 damage);
+        uint32 EnvironmentalDamage(EnviromentalDamage type, uint32 damage);
 
         /*********************************************************/
         /***               FLOOD FILTER SYSTEM                 ***/
@@ -1914,13 +1945,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         float  m_recallO;
         void   SaveRecallPosition();
 
-        // Homebind coordinates
-        uint32 m_homebindMapId;
-        uint16 m_homebindZoneId;
-        float m_homebindX;
-        float m_homebindY;
-        float m_homebindZ;
+        void SetHomebindToCurrentPos();
         void RelocateToHomebind() { SetMapId(m_homebindMapId); Relocate(m_homebindX,m_homebindY,m_homebindZ); }
+        bool TeleportToHomebind(uint32 options = 0) { return TeleportTo(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, GetOrientation(),options); }
 
         // currently visible objects at player client
         typedef std::set<uint64> ClientGUIDs;
@@ -1968,7 +1995,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint32 m_HomebindTimer;
         bool m_InstanceValid;
         // permanent binds and solo binds by difficulty
-        BoundInstancesMap m_boundInstances[TOTAL_DIFFICULTIES];
+        BoundInstancesMap m_boundInstances[MAX_DIFFICULTY];
         InstancePlayerBind* GetBoundInstance(uint32 mapid, uint8 difficulty);
         BoundInstancesMap& GetBoundInstances(uint8 difficulty) { return m_boundInstances[difficulty]; }
         void UnbindInstance(uint32 mapid, uint8 difficulty, bool unload = false);
@@ -2249,6 +2276,13 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         GridReference<Player> m_gridRef;
         MapReference m_mapRef;
+
+        // Homebind coordinates
+        uint32 m_homebindMapId;
+        uint16 m_homebindZoneId;
+        float m_homebindX;
+        float m_homebindY;
+        float m_homebindZ;
 
         uint32 m_lastFallTime;
         float  m_lastFallZ;
