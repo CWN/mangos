@@ -529,7 +529,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             if (trans_rad > 3600.0f)
                 check_passed = false;
         } else {
-            if (GameObjectData const* go_data = objmgr.GetGOData(GetPlayer()->m_anti_transportGUID))
+            if (GameObjectData const* go_data = sObjectMgr.GetGOData(GetPlayer()->m_anti_transportGUID))
             {
                 float delta_gox = go_data->posX - movementInfo.x;
                 float delta_goy = go_data->posY - movementInfo.y;

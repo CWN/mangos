@@ -199,18 +199,6 @@ void WorldSession::HandleMoveSplineDoneOpcode(WorldPacket& recv_data)
     // 2) switch from one map to other in case multim-map taxi path
     // we need proccess only (1)
 
-    //movement anticheat code
-    MovementInfo movementInfo;
-    uint32 MovementFlags;
-
-    recv_data >> MovementFlags;
-    recv_data >> movementInfo.unk1;
-    recv_data >> movementInfo.time;
-    recv_data >> movementInfo.x;
-    recv_data >> movementInfo.y;
-    recv_data >> movementInfo.z;
-    recv_data >> movementInfo.o;
-    //<<< end movement anticheat
 
     uint32 curDest = GetPlayer()->m_taxi.GetTaxiDestination();
     if(!curDest)
