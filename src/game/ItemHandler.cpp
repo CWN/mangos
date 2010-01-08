@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include "Player.h"
 #include "Item.h"
 #include "UpdateData.h"
-#include "ObjectAccessor.h"
 
 void WorldSession::HandleSplitItemOpcode( WorldPacket & recv_data )
 {
@@ -44,13 +43,13 @@ void WorldSession::HandleSplitItemOpcode( WorldPacket & recv_data )
     if (count==0)
         return;                                             //check count - if zero it's fake packet
 
-    if(!_player->IsValidPos(srcbag,srcslot))
+    if(!_player->IsValidPos(srcbag, srcslot, true))
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_NOT_FOUND, NULL, NULL );
         return;
     }
 
-    if(!_player->IsValidPos(dstbag,dstslot))
+    if(!_player->IsValidPos(dstbag, dstslot, false))        // can be autostore pos
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, NULL, NULL );
         return;
@@ -71,13 +70,13 @@ void WorldSession::HandleSwapInvItemOpcode( WorldPacket & recv_data )
     if(srcslot==dstslot)
         return;
 
-    if(!_player->IsValidPos(INVENTORY_SLOT_BAG_0,srcslot))
+    if(!_player->IsValidPos(INVENTORY_SLOT_BAG_0, srcslot, true))
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_NOT_FOUND, NULL, NULL );
         return;
     }
 
-    if(!_player->IsValidPos(INVENTORY_SLOT_BAG_0,dstslot))
+    if(!_player->IsValidPos(INVENTORY_SLOT_BAG_0, dstslot, true))
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, NULL, NULL );
         return;
@@ -123,13 +122,13 @@ void WorldSession::HandleSwapItem( WorldPacket & recv_data )
     if(src==dst)
         return;
 
-    if(!_player->IsValidPos(srcbag,srcslot))
+    if(!_player->IsValidPos(srcbag, srcslot, true))
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_NOT_FOUND, NULL, NULL );
         return;
     }
 
-    if(!_player->IsValidPos(dstbag,dstslot))
+    if(!_player->IsValidPos(dstbag, dstslot, true))
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, NULL, NULL );
         return;
@@ -285,7 +284,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
 
     sLog.outDetail("STORAGE: Item Query = %u", item);
 
-    ItemPrototype const *pProto = objmgr.GetItemPrototype( item );
+    ItemPrototype const *pProto = ObjectMgr::GetItemPrototype( item );
     if( pProto )
     {
         std::string Name        = pProto->Name1;
@@ -294,7 +293,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         int loc_idx = GetSessionDbLocaleIndex();
         if ( loc_idx >= 0 )
         {
-            ItemLocale const *il = objmgr.GetItemLocale(pProto->ItemId);
+            ItemLocale const *il = sObjectMgr.GetItemLocale(pProto->ItemId);
             if (il)
             {
                 if (il->Name.size() > size_t(loc_idx) && !il->Name[loc_idx].empty())
@@ -562,12 +561,12 @@ void WorldSession::HandleSellItemOpcode( WorldPacket & recv_data )
                     pItem->SetCount( pItem->GetCount() - count );
                     _player->ItemRemovedQuestCheck( pItem->GetEntry(), count );
                     if( _player->IsInWorld() )
-                        pItem->SendUpdateToPlayer( _player );
+                        pItem->SendCreateUpdateToPlayer( _player );
                     pItem->SetState(ITEM_CHANGED, _player);
 
                     _player->AddItemToBuyBackSlot( pNewItem );
                     if( _player->IsInWorld() )
-                        pNewItem->SendUpdateToPlayer( _player );
+                        pNewItem->SendCreateUpdateToPlayer( _player );
                 }
                 else
                 {
@@ -736,7 +735,7 @@ void WorldSession::SendListInventory( uint64 vendorguid )
     {
         if(VendorItem const* crItem = vItems->GetItem(i))
         {
-            if(ItemPrototype const *pProto = objmgr.GetItemPrototype(crItem->item))
+            if(ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(crItem->item))
             {
                 if((pProto->AllowableClass & _player->getClassMask()) == 0 && pProto->Bonding == BIND_WHEN_PICKED_UP && !_player->isGameMaster())
                     continue;
@@ -777,7 +776,7 @@ void WorldSession::HandleAutoStoreBagItemOpcode( WorldPacket & recv_data )
     if( !pItem )
         return;
 
-    if(!_player->IsValidPos(dstbag,NULL_SLOT))
+    if(!_player->IsValidPos(dstbag, NULL_SLOT, false))      // can be autostore pos
     {
         _player->SendEquipError( EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, NULL, NULL );
         return;
@@ -966,7 +965,7 @@ void WorldSession::HandleItemNameQueryOpcode(WorldPacket & recv_data)
     recv_data.read_skip<uint64>();                          // guid
 
     sLog.outDebug("WORLD: CMSG_ITEM_NAME_QUERY %u", itemid);
-    ItemPrototype const *pProto = objmgr.GetItemPrototype( itemid );
+    ItemPrototype const *pProto = ObjectMgr::GetItemPrototype( itemid );
     if( pProto )
     {
         std::string Name;
@@ -975,7 +974,7 @@ void WorldSession::HandleItemNameQueryOpcode(WorldPacket & recv_data)
         int loc_idx = GetSessionDbLocaleIndex();
         if (loc_idx >= 0)
         {
-            ItemLocale const *il = objmgr.GetItemLocale(pProto->ItemId);
+            ItemLocale const *il = sObjectMgr.GetItemLocale(pProto->ItemId);
             if (il)
             {
                 if (il->Name.size() > size_t(loc_idx) && !il->Name[loc_idx].empty())
@@ -1243,7 +1242,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
         _player->ApplyEnchantment(itemTarget,EnchantmentSlot(enchant_slot),true);
 
     bool SocketBonusToBeActivated = itemTarget->GemsFitSockets();//current socketbonus state
-    if(SocketBonusActivated ^ SocketBonusToBeActivated)     //if there was a change...
+    if(SocketBonusActivated != SocketBonusToBeActivated)    //if there was a change...
     {
         _player->ApplyEnchantment(itemTarget,BONUS_ENCHANTMENT_SLOT,false);
         itemTarget->SetEnchantment(BONUS_ENCHANTMENT_SLOT, (SocketBonusToBeActivated ? itemTarget->GetProto()->socketBonus : 0), 0, 0);

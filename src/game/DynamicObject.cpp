@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,8 +129,8 @@ void DynamicObject::Update(uint32 p_time)
         TypeContainerVisitor<MaNGOS::DynamicObjectUpdater, GridTypeMapContainer > grid_object_notifier(notifier);
 
         CellLock<GridReadGuard> cell_lock(cell, p);
-        cell_lock->Visit(cell_lock, world_object_notifier, *GetMap());
-        cell_lock->Visit(cell_lock, grid_object_notifier,  *GetMap());
+        cell_lock->Visit(cell_lock, world_object_notifier, *GetMap(), *this, m_radius);
+        cell_lock->Visit(cell_lock, grid_object_notifier,  *GetMap(), *this, m_radius);
     }
 
     if(deleteThis)

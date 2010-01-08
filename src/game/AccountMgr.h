@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,9 +50,10 @@ class AccountMgr
         uint32 GetId(std::string username);
         uint32 GetSecurity(uint32 acc_id);
         bool GetName(uint32 acc_id, std::string &name);
+        std::string CalculateShaPassHash(std::string& name, std::string& password);
 
         static bool normalizeString(std::string& utf8str);
 };
 
-#define accmgr MaNGOS::Singleton<AccountMgr>::Instance()
+#define sAccountMgr MaNGOS::Singleton<AccountMgr>::Instance()
 #endif

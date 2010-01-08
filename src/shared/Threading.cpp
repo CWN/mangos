@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2009-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 #include "Threading.h"
+#include "Errors.h"
 #include <ace/OS_NS_unistd.h>
 #include <ace/Sched_Params.h>
 #include <vector>
@@ -181,7 +182,7 @@ ACE_THR_FUNC_RETURN Thread::ThreadTask(void * param)
     Runnable * _task = (Runnable*)param;
     _task->run();
 
-    // task execution complete, free referecne added at 
+    // task execution complete, free referecne added at
     _task->decReference();
 
     return (ACE_THR_FUNC_RETURN)0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1105,8 +1105,9 @@ enum SessionStatus
     STATUS_AUTHED = 0,                                      ///< Player authenticated (_player==NULL, m_playerRecentlyLogout = false or will be reset before handler call)
     STATUS_LOGGEDIN,                                        ///< Player in game (_player!=NULL, inWorld())
     STATUS_TRANSFER,                                        ///< Player transferring to another map (_player!=NULL, !inWorld())
-    STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,                    ///< _player!= NULL or _player==NULL && m_playerRecentlyLogout)
-    STATUS_NEVER                                            ///< Opcode not accepted from client (deprecated or server side only)
+    STATUS_LOGGEDIN_OR_RECENTLY_LOGGEDOUT,                  ///< _player!= NULL or _player==NULL && m_playerRecentlyLogout)
+    STATUS_NEVER,                                           ///< Opcode not accepted from client (deprecated or server side only)
+    STATUS_UNHANDLED                                        ///< We don' handle this opcode yet
 };
 
 class WorldPacket;

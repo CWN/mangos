@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ ReactorAI::AttackStart(Unit *p)
     {
         DEBUG_LOG("Tag unit GUID: %u (TypeId: %u) as a victim", p->GetGUIDLow(), p->GetTypeId());
         i_victimGuid = p->GetGUID();
-        m_creature->AddThreat(p, 0.0f);
+        m_creature->AddThreat(p);
 
         m_creature->SetInCombatWith(p);
         p->SetInCombatWith(m_creature);
@@ -68,7 +68,7 @@ void
 ReactorAI::UpdateAI(const uint32 /*time_diff*/)
 {
     // update i_victimGuid if i_creature.getVictim() !=0 and changed
-    if(!m_creature->SelectHostilTarget() || !m_creature->getVictim())
+    if(!m_creature->SelectHostileTarget() || !m_creature->getVictim())
         return;
 
     i_victimGuid = m_creature->getVictim()->GetGUID();
